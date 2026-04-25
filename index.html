@@ -5,169 +5,101 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --bg: #0f172a;
-            --card-bg: #1e293b;
-            --text: #f8fafc;
-            --secondary: #94a3b8;
-            --accent: #38bdf8;
-            --button: #0284c7;
-            --success: #22c55e;
-        }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
+            font-family: -apple-system, system-ui, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
             margin: 0;
-            padding: 16px;
+            padding: 20px;
             display: flex;
-            flex-direction: column;
-            align-items: center;
+            justify-content: center;
         }
-
-        .container {
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 24px;
-        }
-
-        .header h1 {
-            font-size: 24px;
-            margin: 0;
-            color: var(--text);
-        }
-
+        .container { width: 100%; max-width: 400px; }
+        .header { text-align: center; margin-bottom: 20px; font-size: 24px; font-weight: bold; }
         .card {
-            background: var(--card-bg);
+            background: #1e293b;
             border-radius: 20px;
-            padding: 24px;
-            margin-bottom: 16px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            box-shadow: 0 10px 15px rgba(0,0,0,0.3);
         }
-
-        .status-row {
+        .row {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-
-        .status-label {
-            color: var(--secondary);
-            font-size: 14px;
-        }
-
-        .status-value {
-            font-weight: 600;
+            margin-bottom: 15px;
             font-size: 16px;
         }
-
-        .status-active {
-            color: var(--success);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .token-container {
+        .label { color: #94a3b8; }
+        .val { font-weight: 600; }
+        .active { color: #22c55e; }
+        .token-box {
             background: #0f172a;
             border-radius: 12px;
-            padding: 16px;
-            margin-top: 16px;
+            padding: 15px;
+            margin: 20px 0;
             word-break: break-all;
             font-family: monospace;
-            font-size: 12px;
-            color: var(--success);
+            font-size: 13px;
+            color: #38bdf8;
             border: 1px solid #334155;
-            max-height: 80px;
+            max-height: 100px;
             overflow-y: auto;
         }
-
         .btn {
-            background-color: var(--button);
+            background: #0284c7;
             color: white;
             border: none;
             border-radius: 12px;
-            padding: 14px;
+            padding: 15px;
             width: 100%;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: bold;
             cursor: pointer;
-            transition: opacity 0.2s;
-            margin-top: 12px;
         }
-
-        .btn:active {
-            opacity: 0.8;
-        }
-
-        .footer-text {
-            text-align: center;
-            color: var(--secondary);
-            font-size: 12px;
-            margin-top: 12px;
-            line-height: 1.4;
-        }
+        .btn:active { background: #0369a1; }
+        .footer { text-align: center; font-size: 12px; color: #64748b; margin-top: 20px; line-height: 1.5; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>Личный кабинет</h1>
-        </div>
-
+        <div class="header">Личный кабинет</div>
         <div class="card">
-            <div class="status-row">
-                <span class="status-label">Статус:</span>
-                <span class="status-value status-active">● Защита активна</span>
+            <div class="row">
+                <span class="label">Статус:</span>
+                <span class="val active">● Защита активна</span>
             </div>
-            <div class="status-row">
-                <span class="status-label">Баланс:</span>
-                <span class="status-value" id="balance">0₽</span>
+            <div class="row">
+                <span class="label">Ваш баланс:</span>
+                <span class="val" id="balance">0₽</span>
             </div>
-            <div class="status-row">
-                <span class="status-label">Осталось:</span>
-                <span class="status-value" id="days">--</span>
-            </div>
-
-            <div style="margin-top: 20px;">
-                <span class="status-label">Ваш токен доступа:</span>
-                <div class="token-container" id="token">Загрузка...</div>
+            <div class="row">
+                <span class="label">Осталось дней:</span>
+                <span class="val" id="days">--</span>
             </div>
 
-            <button class="btn" onclick="copyToken()">Скопировать токен</button>
+            <div style="color: #94a3b8; font-size: 14px; margin-top: 20px;">Ваш токен доступа:</div>
+            <div class="token-box" id="token">Загрузка...</div>
+
+            <button class="btn" onclick="copy()">Скопировать токен</button>
         </div>
-
-        <p class="footer-text">
-            Используйте данный токен в приложении-клиенте (v2rayNG или FoXray) для установки защищенного соединения.
-        </p>
+        <div class="footer">
+            Используйте токен в приложении v2rayNG или FoXray для безопасного соединения.
+        </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
+        
+        const params = new URLSearchParams(window.location.search);
+        document.getElementById('token').innerText = decodeURIComponent(params.get('key') || 'Ошибка');
+        document.getElementById('days').innerText = (params.get('days') || '0') + ' дн.';
+        document.getElementById('balance').innerText = (params.get('balance') || '0') + '₽';
 
-        // Получаем данные из URL, которые передает бот
-        const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get('key') || 'Ключ не найден';
-        const days = urlParams.get('days') || '0';
-        const balance = urlParams.get('balance') || '0';
-
-        // Заполняем данные на странице
-        document.getElementById('token').innerText = decodeURIComponent(token);
-        document.getElementById('days').innerText = days + ' дн.';
-        document.getElementById('balance').innerText = balance + '₽';
-
-        function copyToken() {
-            const tokenText = document.getElementById('token').innerText;
-            navigator.clipboard.writeText(tokenText).then(() => {
+        function copy() {
+            const t = document.getElementById('token').innerText;
+            navigator.clipboard.writeText(t).then(() => {
                 tg.HapticFeedback.notificationOccurred('success');
-                alert('Токен скопирован в буфер обмена!');
+                alert('Токен скопирован!');
             });
         }
     </script>
