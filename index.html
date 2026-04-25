@@ -6,94 +6,93 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --bg: var(--tg-theme-bg-color, #1c1c1c);
-            --text: var(--tg-theme-text-color, #ffffff);
-            --secondary: var(--tg-theme-secondary-bg-color, #2c2c2c);
-            --button: var(--tg-theme-button-color, #3390ec);
-            --button-text: var(--tg-theme-button-text-color, #ffffff);
-            --accent: #31b545;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f8fafc;
+            --accent: #38bdf8;
+            --success: #22c55e;
         }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: var(--bg);
             color: var(--text);
-            margin: 0; padding: 15px;
-            display: flex; flex-direction: column; align-items: center;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
         .container { width: 100%; max-width: 400px; }
         .card {
-            background: var(--secondary);
-            border-radius: 16px;
-            padding: 20px;
+            background: var(--card);
+            border-radius: 20px;
+            padding: 24px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
             margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
-        h2 { margin-top: 0; font-size: 22px; text-align: center; }
-        .info-row { display: flex; justify-content: space-between; margin: 10px 0; font-size: 15px; }
-        .status-active { color: var(--accent); font-weight: bold; }
-        .key-box {
-            background: #000000;
-            color: #00ff41;
-            padding: 12px;
-            border-radius: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
-            word-break: break-all;
-            margin-top: 15px;
-            border: 1px solid #333;
+        .header { text-align: center; margin-bottom: 20px; }
+        .status { color: var(--success); font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .label { color: #94a3b8; font-size: 14px; margin-bottom: 8px; }
+        .value { font-family: monospace; background: #0f172a; padding: 12px; border-radius: 10px; word-break: break-all; border: 1px solid #334155; margin-bottom: 15px; font-size: 13px; }
+        button {
+            width: 100%;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 15px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.1s;
         }
-        .btn {
-            background-color: var(--button);
-            color: var(--button-text);
-            border: none; border-radius: 12px;
-            padding: 15px; width: 100%;
-            font-size: 16px; font-weight: 600;
-            cursor: pointer; transition: opacity 0.2s;
-        }
-        .btn:active { opacity: 0.8; }
-        .hint { font-size: 12px; color: #888; text-align: center; margin-top: 10px; }
+        button:active { transform: scale(0.98); }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="card">
-            <h2>Private IT Node</h2>
-            <div class="info-row">
-                <span>Статус:</span>
-                <span class="status-active">● Подписка активна</span>
-            </div>
-            <div class="info-row">
-                <span>Осталось дней:</span>
-                <span id="days">30</span>
-            </div>
-            
-            <div style="margin-top: 25px;">
-                <span style="font-weight: 600;">Ваш VLESS ключ:</span>
-                <div class="key-box" id="key">Нажмите "Копировать", чтобы увидеть ключ</div>
-            </div>
+        <div class="header">
+            <h2 style="margin: 0;">Private IT Node</h2>
+            <p class="status">● Протокол защиты активен</p>
         </div>
         
-        <button class="btn" onclick="copyKey()">Скопировать ключ</button>
-        <p class="hint">Ключ используется в приложениях v2rayNG или FoXray</p>
+        <div class="card">
+            <div class="label">Осталось дней защиты:</div>
+            <div id="days" style="font-size: 24px; font-weight: bold; margin-bottom: 20px;">--</div>
+            
+            <div class="label">Персональный токен доступа:</div>
+            <div id="key" class="value">Загрузка...</div>
+            
+            <button onclick="copyKey()">Скопировать токен</button>
+        </div>
+        
+        <p style="font-size: 12px; color: #64748b; text-align: center;">
+            Используйте данный токен в приложении-клиенте для установки защищенного соединения.
+        </p>
     </div>
 
     <script>
-        let tg = window.Telegram.WebApp;
-        tg.expand(); 
+        const tg = window.Telegram.WebApp;
+        tg.expand();
 
-        // Получаем параметры из ссылки (если будем передавать их из бота)
         const urlParams = new URLSearchParams(window.location.search);
-        const userKey = urlParams.get('key') || "Ключ не найден. Запустите бота.";
-        const userDays = urlParams.get('days') || "30";
+        const key = urlParams.get('key');
+        const days = urlParams.get('days');
 
-        document.getElementById('key').innerText = userKey;
-        document.getElementById('days').innerText = userDays;
+        if(key) document.getElementById('key').innerText = key;
+        if(days) document.getElementById('days').innerText = days;
 
         function copyKey() {
-            navigator.clipboard.writeText(userKey).then(() => {
-                tg.HapticFeedback.notificationOccurred('success');
-                tg.showAlert("Ключ успешно скопирован в буфер обмена!");
-            });
+            const el = document.createElement('textarea');
+            el.value = key;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            
+            tg.HapticFeedback.notificationOccurred('success');
+            alert('Токен скопирован!');
         }
     </script>
 </body>
