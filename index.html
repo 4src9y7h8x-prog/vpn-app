@@ -1,61 +1,174 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --accent: #38bdf8; }
-        body { font-family: sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .container { width: 100%; max-width: 400px; }
-        .card { background: var(--card); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
-        .status { color: #22c55e; font-weight: bold; text-align: center; margin-bottom: 20px; }
-        .label { color: #94a3b8; font-size: 14px; margin-bottom: 5px; }
-        .value { font-family: monospace; background: #0f172a; padding: 10px; border-radius: 10px; word-break: break-all; border: 1px solid #334155; margin-bottom: 15px; font-size: 12px; }
-        .price-tag { display: flex; justify-content: space-between; background: rgba(56, 189, 248, 0.1); padding: 10px; border-radius: 10px; margin-top: 10px; border: 1px dashed var(--accent); }
-        button { width: 100%; background: var(--accent); color: #000; border: none; padding: 15px; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn-pay { background: #f8fafc; color: #0f172a; margin-top: 20px; }
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --secondary: #94a3b8;
+            --accent: #38bdf8;
+            --button: #0284c7;
+            --success: #22c55e;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin: 0;
+            color: var(--text);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .status-label {
+            color: var(--secondary);
+            font-size: 14px;
+        }
+
+        .status-value {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .status-active {
+            color: var(--success);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .token-container {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 16px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+            color: var(--success);
+            border: 1px solid #334155;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+
+        .btn {
+            background-color: var(--button);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 14px;
+            width: 100%;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-top: 12px;
+        }
+
+        .btn:active {
+            opacity: 0.8;
+        }
+
+        .footer-text {
+            text-align: center;
+            color: var(--secondary);
+            font-size: 12px;
+            margin-top: 12px;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2 style="text-align: center;">Личный кабинет</h2>
-        <div class="status">● Протокол защиты активен</div>
-        
-        <div class="card">
-            <div class="label">Осталось дней:</div>
-            <div id="days" style="font-size: 32px; font-weight: bold; margin-bottom: 20px;">0</div>
-            
-            <div class="label">Ваш токен:</div>
-            <div id="key" class="value">Загрузка...</div>
-            <button onclick="copyKey()">Скопировать токен</button>
+        <div class="header">
+            <h1>Личный кабинет</h1>
         </div>
 
         <div class="card">
-            <h3 style="margin-top: 0;">Продление доступа</h3>
-            <div class="price-tag"><span>1 месяц</span> <b>250₽</b></div>
-            <div class="price-tag"><span>3 месяца</span> <b>600₽ (выгода!)</b></div>
-            <button class="btn-pay" onclick="pay()">Оплатить / Продлить</button>
+            <div class="status-row">
+                <span class="status-label">Статус:</span>
+                <span class="status-value status-active">● Защита активна</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Баланс:</span>
+                <span class="status-value" id="balance">0₽</span>
+            </div>
+            <div class="status-row">
+                <span class="status-label">Осталось:</span>
+                <span class="status-value" id="days">--</span>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <span class="status-label">Ваш токен доступа:</span>
+                <div class="token-container" id="token">Загрузка...</div>
+            </div>
+
+            <button class="btn" onclick="copyToken()">Скопировать токен</button>
         </div>
+
+        <p class="footer-text">
+            Используйте данный токен в приложении-клиенте (v2rayNG или FoXray) для установки защищенного соединения.
+        </p>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
+
+        // Получаем данные из URL, которые передает бот
         const urlParams = new URLSearchParams(window.location.search);
-        document.getElementById('key').innerText = urlParams.get('key') || 'Ошибка ключа';
-        document.getElementById('days').innerText = urlParams.get('days') || '0';
+        const token = urlParams.get('key') || 'Ключ не найден';
+        const days = urlParams.get('days') || '0';
+        const balance = urlParams.get('balance') || '0';
 
-        function copyKey() {
-            navigator.clipboard.writeText(urlParams.get('key'));
-            tg.HapticFeedback.notificationOccurred('success');
-            alert('Токен скопирован!');
-        }
+        // Заполняем данные на странице
+        document.getElementById('token').innerText = decodeURIComponent(token);
+        document.getElementById('days').innerText = days + ' дн.';
+        document.getElementById('balance').innerText = balance + '₽';
 
-        function pay() {
-            tg.close(); // Закрываем приложение
-            // Бот автоматически отправит сообщение в поддержку или на оплату
-            window.location.href = "https://t.me/ProfitPicksNow"; 
+        function copyToken() {
+            const tokenText = document.getElementById('token').innerText;
+            navigator.clipboard.writeText(tokenText).then(() => {
+                tg.HapticFeedback.notificationOccurred('success');
+                alert('Токен скопирован в буфер обмена!');
+            });
         }
     </script>
 </body>
