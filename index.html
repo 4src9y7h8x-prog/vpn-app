@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg: var(--tg-theme-bg-color, #1c1c1c);
+            --text: var(--tg-theme-text-color, #ffffff);
+            --secondary: var(--tg-theme-secondary-bg-color, #2c2c2c);
+            --button: var(--tg-theme-button-color, #3390ec);
+            --button-text: var(--tg-theme-button-text-color, #ffffff);
+            --accent: #31b545;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0; padding: 15px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .container { width: 100%; max-width: 400px; }
+        .card {
+            background: var(--secondary);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        h2 { margin-top: 0; font-size: 22px; text-align: center; }
+        .info-row { display: flex; justify-content: space-between; margin: 10px 0; font-size: 15px; }
+        .status-active { color: var(--accent); font-weight: bold; }
+        .key-box {
+            background: #000000;
+            color: #00ff41;
+            padding: 12px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            word-break: break-all;
+            margin-top: 15px;
+            border: 1px solid #333;
+        }
+        .btn {
+            background-color: var(--button);
+            color: var(--button-text);
+            border: none; border-radius: 12px;
+            padding: 15px; width: 100%;
+            font-size: 16px; font-weight: 600;
+            cursor: pointer; transition: opacity 0.2s;
+        }
+        .btn:active { opacity: 0.8; }
+        .hint { font-size: 12px; color: #888; text-align: center; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h2>Private IT Node</h2>
+            <div class="info-row">
+                <span>Статус:</span>
+                <span class="status-active">● Подписка активна</span>
+            </div>
+            <div class="info-row">
+                <span>Осталось дней:</span>
+                <span id="days">30</span>
+            </div>
+            
+            <div style="margin-top: 25px;">
+                <span style="font-weight: 600;">Ваш VLESS ключ:</span>
+                <div class="key-box" id="key">Нажмите "Копировать", чтобы увидеть ключ</div>
+            </div>
+        </div>
+        
+        <button class="btn" onclick="copyKey()">Скопировать ключ</button>
+        <p class="hint">Ключ используется в приложениях v2rayNG или FoXray</p>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand(); 
+
+        // Получаем параметры из ссылки (если будем передавать их из бота)
+        const urlParams = new URLSearchParams(window.location.search);
+        const userKey = urlParams.get('key') || "Ключ не найден. Запустите бота.";
+        const userDays = urlParams.get('days') || "30";
+
+        document.getElementById('key').innerText = userKey;
+        document.getElementById('days').innerText = userDays;
+
+        function copyKey() {
+            navigator.clipboard.writeText(userKey).then(() => {
+                tg.HapticFeedback.notificationOccurred('success');
+                tg.showAlert("Ключ успешно скопирован в буфер обмена!");
+            });
+        }
+    </script>
+</body>
+</html>
