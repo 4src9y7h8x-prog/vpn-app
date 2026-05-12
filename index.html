@@ -6,106 +6,86 @@
     <title>Private IT Node Anti-Stress</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body {
-            margin: 0; padding: 0;
-            background-color: #050a05;
-            color: #00ff41;
-            font-family: 'Courier New', Courier, monospace;
-            overflow: hidden; touch-action: none;
-            display: flex; flex-direction: column;
-            height: 100vh; user-select: none;
+        body { margin: 0; padding: 0; background: #050a05; color: #00ff41; font-family: monospace; overflow: hidden; height: 100vh; }
+        canvas { position: absolute; top: 0; left: 0; z-index: 1; opacity: 0.3; }
+        #ui { position: relative; z-index: 10; text-align: center; padding: 15px; border-bottom: 1px solid #00ff41; background: rgba(0,0,0,0.8); }
+        .node { 
+            position: absolute; width: 90px; height: 90px; 
+            background: radial-gradient(circle, #00ff41 10%, #002200 80%); 
+            border-radius: 50%; box-shadow: 0 0 25px #00ff41; 
+            z-index: 20; touch-action: none;
         }
-        #stats {
-            padding: 20px; text-align: center;
-            border-bottom: 1px solid #00ff41;
-            background: rgba(0, 0, 0, 0.9); z-index: 10;
-        }
-        #game-container { position: relative; width: 100%; flex-grow: 1; }
-        .node {
-            position: absolute; width: 85px; height: 85px;
-            background: radial-gradient(circle, #00ff41 0%, #003300 70%);
-            border-radius: 50%; box-shadow: 0 0 30px #00ff41;
-            cursor: pointer; transition: transform 0.1s;
-        }
-        .particle {
-            position: absolute; width: 3px; height: 3px;
-            background-color: #00ff41; border-radius: 50%; pointer-events: none;
-        }
-        .glitch-text { font-weight: bold; letter-spacing: 2px; text-shadow: 1px 1px #ff0000, -1px -1px #0000ff; }
+        .msg { font-size: 10px; color: #fff; opacity: 0.7; margin-top: 5px; }
     </style>
 </head>
 <body>
-
-    <div id="stats">
-        <div class="glitch-text">PRIVATE IT NODE // ZONE</div>
-        <div style="margin-top: 5px; font-size: 14px;">NODES PROCESSED: <span id="score">0</span></div>
+    <canvas id="matrix"></canvas>
+    <div id="ui">
+        <div style="text-shadow: 0 0 10px #00ff41;">PRIVATE IT NODE // SYSTEM</div>
+        <div id="status">STATUS: STANDBY</div>
+        <div style="font-size: 20px;">[ <span id="score">0</span> ]</div>
+        <div class="msg" id="log">WAITING FOR CONNECTION...</div>
     </div>
+    <div id="node" class="node"></div>
 
-    <div id="game-container">
-        <div id="node" class="node"></div>
-    </div>
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+    const canvas = document.getElementById('matrix');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const logEl = document.getElementById('log');
+    const node = document.getElementById('node');
+    let score = 0;
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+    // --- MATRIX BACKGROUND ---
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const letters = "01ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const fontSize = 10;
+    const columns = canvas.width / fontSize;
+    const drops = Array(Math.floor(columns)).fill(1);
 
-        const node = document.getElementById('node');
-        const scoreEl = document.getElementById('score');
-        const container = document.getElementById('game-container');
-        let score = 0;
-
-        // Создаем аудио-контекст для синтеза звука (чтобы не грузить файлы)
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-        function playPopSound() {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(400, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.1);
+    function drawMatrix() {
+        ctx.fillStyle = "rgba(5, 10, 5, 0.1)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#00ff41";
+        ctx.font = fontSize + "px monospace";
+        for (let i = 0; i < drops.length; i++) {
+            const text = letters[Math.floor(Math.random() * letters.length)];
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+            drops[i]++;
         }
+    }
+    setInterval(drawMatrix, 50);
 
-        // Фоновый эмбиент (синтезированный шум для атмосферы)
-        function playAmbient() {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(60, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-        }
+    // --- AUDIO & HAPTIC ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const logs = ["BYPASSING DPI...", "ENCRYPTING...", "NODE ACTIVE", "ROTATING IP...", "Reality Protocol OK"];
 
-        function moveNode() {
-            const rect = container.getBoundingClientRect();
-            const x = Math.random() * (rect.width - 100);
-            const y = Math.random() * (rect.height - 100);
-            node.style.left = x + 'px';
-            node.style.top = y + 'px';
-        }
+    function playPop() {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.frequency.setValueAtTime(500 + (score % 100), audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    }
 
-        node.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (score === 0) playAmbient(); // Включаем фон при первом клике
-            
-            score++;
-            scoreEl.innerText = score;
-            
-            playPopSound();
-            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('rigid');
-
-            moveNode();
-        });
-
-        moveNode();
-    </script>
+    node.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        score++;
+        scoreEl.innerText = score;
+        logEl.innerText = logs[Math.floor(Math.random() * logs.length)];
+        playPop();
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+        
+        node.style.left = Math.random() * (window.innerWidth - 100) + 'px';
+        node.style.top = Math.random() * (window.innerHeight - 200) + 150 + 'px';
+    });
+</script>
 </body>
 </html>
