@@ -3,88 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PRIVATE IT NODE // ELITE SLICER v2.2</title>
+    <title>PRIVATE IT NODE // ELITE SLICER v2.5</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        :root {
+            --neon-green: #33ff33;
+            --neon-red: #ff3333;
+            --neon-gold: #ffcc00;
+        }
+
         body { 
-            margin: 0; padding: 0; background: #000; color: #00ff41; 
+            margin: 0; padding: 0; background: #000; color: var(--neon-green); 
             font-family: 'Courier New', monospace; overflow: hidden; 
-            height: 100vh; touch-action: none; 
+            height: 100vh; touch-action: none; user-select: none;
         }
         
+        /* CRT Эффект */
+        body::before {
+            content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 100; background-size: 100% 4px, 3px 100%; pointer-events: none;
+        }
+
         #bg-image {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: url('IMG_2080.png') no-repeat center center;
-            background-size: cover; z-index: 1; opacity: 0.35;
+            background: radial-gradient(circle, #051a05 0%, #000 100%);
+            z-index: 1; opacity: 0.5;
         }
 
-        canvas { position: absolute; top: 0; left: 0; z-index: 5; pointer-events: none; }
+        canvas { position: absolute; top: 0; left: 0; z-index: 5; }
 
-        /* Анимации для TikTok-эффекта */
         @keyframes glitch {
             0% { transform: translate(0); }
-            20% { transform: translate(-5px, 3px) skewX(5deg); filter: hue-rotate(90deg) contrast(2); }
-            40% { transform: translate(5px, -3px) scale(1.02); }
+            20% { transform: translate(-3px, 2px); filter: hue-rotate(90deg); }
+            40% { transform: translate(3px, -2px); }
             100% { transform: translate(0); }
         }
-        .glitch-active { animation: glitch 0.2s ease-in-out; }
+        .glitch-active { animation: glitch 0.15s infinite; }
 
         #ui-header {
             position: relative; z-index: 10; padding: 15px 20px;
-            background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0) 100%);
+            background: linear-gradient(180deg, rgba(0,20,0,0.9) 0%, rgba(0,0,0,0) 100%);
             border-bottom: 1px solid rgba(51, 255, 51, 0.2);
         }
         
-        .header-top { display: flex; justify-content: space-between; font-size: 13px; letter-spacing: 1px; color: #33ff33; }
+        .header-top { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; }
         .stats-main { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 5px; }
         
         #score-val { 
-            font-size: 58px; font-weight: 900; color: #fff; line-height: 0.9; 
-            text-shadow: 0 0 20px #33ff33; font-family: 'Arial Black', sans-serif;
+            font-size: 48px; font-weight: 900; color: #fff; line-height: 0.9; 
+            text-shadow: 0 0 15px var(--neon-green); font-family: 'Arial Black', sans-serif;
         }
         
-        #combo-ui { font-size: 18px; color: #ffcc00; font-weight: bold; min-height: 22px; }
+        #combo-ui { color: var(--neon-gold); min-height: 20px; text-transform: uppercase; }
+
+        .progress-box { text-align: right; }
+        .bar-container { width: 120px; height: 8px; background: #031a03; border: 1px solid var(--neon-green); margin-top: 4px; }
+        #bar-fill { width: 0%; height: 100%; background: var(--neon-green); transition: width 0.3s; shadow: 0 0 10px var(--neon-green); }
 
         .monitor {
-            width: 47%; background: rgba(0, 20, 0, 0.8); backdrop-filter: blur(8px);
-            border: 1px solid rgba(51, 255, 51, 0.3); padding: 8px; font-size: 10px;
-            height: 70px; overflow: hidden; color: #0f0;
+            width: 45%; background: rgba(0, 15, 0, 0.7); backdrop-filter: blur(5px);
+            border: 1px solid rgba(51, 255, 51, 0.2); padding: 8px; font-size: 9px;
+            height: 60px; overflow: hidden; color: var(--neon-green); box-sizing: border-box;
+        }
+
+        #start-screen {
+            position: absolute; inset: 0; z-index: 200; background: #000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
 
         #start-btn {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 100; background: #33ff33; color: #000; border: none;
-            padding: 20px 50px; font-family: 'Courier New', monospace; font-weight: 1000; 
-            cursor: pointer; box-shadow: 0 0 50px #33ff33; border-radius: 4px; font-size: 20px;
+            background: var(--neon-green); color: #000; border: none;
+            padding: 15px 40px; font-family: 'Courier New', monospace; font-weight: bold;
+            cursor: pointer; box-shadow: 0 0 30px var(--neon-green); font-size: 18px;
         }
     </style>
 </head>
 <body>
     <div id="bg-image"></div>
-    <button id="start-btn">INITIALIZE_UPLINK</button>
+    
+    <div id="start-screen">
+        <h1 style="text-shadow: 0 0 10px var(--neon-green);">ELITE_SLICER v2.5</h1>
+        <button id="start-btn">INITIALIZE_SESSION</button>
+    </div>
 
     <div id="ui-header">
         <div class="header-top">
-            <span>PRIVATE IT NODE // ELITE_SLICER</span>
+            <span>SYS.ADMIN@NODE_01</span>
             <span id="combo-ui"></span>
         </div>
         <div class="stats-main">
             <div>
-                <div style="font-size: 9px; opacity: 0.7;">TOTAL_DATA_EXTRACTED</div>
+                <div style="font-size: 9px; opacity: 0.7;">DATA_EXTRACTED</div>
                 <div id="score-val">0</div>
             </div>
             <div class="progress-box">
-                <div style="font-size: 10px; margin-bottom: 5px;">SECURITY_BYPASS: <span id="lvl-num">3</span></div>
-                <div style="width: 120px; height: 10px; background: #031a03; border: 1px solid #33ff33;">
-                    <div id="bar-fill" style="width: 40%; height: 100%; background: #33ff33; box-shadow: 0 0 10px #33ff33;"></div>
-                </div>
+                <div style="font-size: 10px;">LEVEL: <span id="lvl-num">1</span></div>
+                <div class="bar-container"><div id="bar-fill"></div></div>
             </div>
         </div>
     </div>
 
-    <div id="ui-footer" style="position: absolute; bottom: 110px; width: 100%; display: flex; justify-content: space-around; z-index: 10; padding: 0 10px; box-sizing: border-box;">
-        <div class="monitor">[NODE_LOG]<br><div id="log-1">...</div></div>
-        <div class="monitor">[UPLINK_STAT]<br><div id="log-2">...</div></div>
+    <div id="ui-footer" style="position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: space-around; z-index: 10;">
+        <div class="monitor">[SYSTEM_LOG]<br><div id="log-1">IDLE...</div></div>
+        <div class="monitor">[NETWORK_TRAFFIC]<br><div id="log-2">ENCRYPTED</div></div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -92,102 +114,117 @@
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
+    tg.enableClosingConfirmation();
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    let score = 0, level = 3, exp = 40, gameActive = false;
-    let objects = [], trail = [], particles = [];
+    let score = 0, level = 1, exp = 0, gameActive = false;
+    let objects = [], trail = [], particles = [], floatingTexts = [];
     let combo = 0, lastHit = 0;
 
-    const audio = new Audio("music.mp3");
-    audio.loop = true;
+    // Инициализация звука (опционально)
+    const playHaptic = (type) => {
+        if (tg.HapticFeedback) {
+            if (type === 'error') tg.HapticFeedback.notificationOccurred('error');
+            else tg.HapticFeedback.impactOccurred('medium');
+        }
+    };
 
     document.getElementById('start-btn').onclick = () => {
         gameActive = true;
-        document.getElementById('start-btn').style.display = 'none';
-        audio.play().catch(() => {});
+        document.getElementById('start-screen').style.display = 'none';
         startLogs();
     };
 
     class Particle {
         constructor(x, y, color) {
             this.x = x; this.y = y;
-            this.sx = (Math.random() - 0.5) * 12;
-            this.sy = (Math.random() - 0.5) * 12;
+            this.sx = (Math.random() - 0.5) * 10;
+            this.sy = (Math.random() - 0.5) * 10;
             this.life = 1.0;
             this.color = color;
         }
-        update() { this.x += this.sx; this.y += this.sy; this.life -= 0.05; }
+        update() { this.x += this.sx; this.y += this.sy; this.life -= 0.03; }
         draw() {
-            ctx.fillStyle = this.color.replace(')', `, ${this.life})`).replace('rgb', 'rgba');
-            ctx.fillRect(this.x, this.y, 3, 3);
+            ctx.fillStyle = this.color.replace('rgb', 'rgba').replace(')', `, ${this.life})`);
+            ctx.fillRect(this.x, this.y, 2, 2);
+        }
+    }
+
+    class FloatingText {
+        constructor(x, y, text, color) {
+            this.x = x; this.y = y; this.text = text; this.color = color;
+            this.life = 1.0;
+        }
+        update() { this.y -= 1; this.life -= 0.02; }
+        draw() {
+            ctx.fillStyle = this.color.replace('rgb', 'rgba').replace(')', `, ${this.life})`);
+            ctx.font = "bold 16px Courier New";
+            ctx.fillText(this.text, this.x, this.y);
         }
     }
 
     class DataNode {
         constructor() {
-            this.size = 55;
-            this.x = 50 + Math.random() * (canvas.width - 100);
-            this.y = canvas.height + 60;
-            this.sy = -(14 + Math.random() * 6);
-            this.sx = (Math.random() - 0.5) * 4;
+            this.size = 45;
+            this.x = 40 + Math.random() * (canvas.width - 80);
+            this.y = canvas.height + 50;
+            this.sy = -(12 + Math.random() * 5 + (level * 0.5));
+            this.sx = (Math.random() - 0.5) * 3;
             this.rot = 0;
-            this.rotV = (Math.random() - 0.5) * 0.2;
+            this.rotV = (Math.random() - 0.5) * 0.15;
             
             let r = Math.random();
-            if (r < 0.15) { this.type = 'err'; this.color = 'rgb(255, 50, 50)'; }
-            else if (r > 0.9) { this.type = 'gold'; this.color = 'rgb(255, 204, 0)'; }
+            if (r < 0.15) { this.type = 'err'; this.color = 'rgb(255, 51, 51)'; }
+            else if (r > 0.92) { this.type = 'gold'; this.color = 'rgb(255, 204, 0)'; }
             else { this.type = 'data'; this.color = 'rgb(51, 255, 51)'; }
         }
-        update() { this.x += this.sx; this.sy += 0.38; this.y += this.sy; this.rot += this.rotV; }
+        update() { this.x += this.sx; this.sy += 0.35; this.y += this.sy; this.rot += this.rotV; }
         draw() {
             ctx.save();
             ctx.translate(this.x, this.y);
             ctx.rotate(this.rot);
             ctx.strokeStyle = this.color;
-            ctx.lineWidth = 3;
-            ctx.shadowBlur = 15; ctx.shadowColor = this.color;
+            ctx.lineWidth = 2;
+            ctx.shadowBlur = 10; ctx.shadowColor = this.color;
             ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
-            
             ctx.fillStyle = this.color;
-            ctx.font = "bold 10px monospace";
-            ctx.fillText(this.type.toUpperCase(), -this.size/2 + 5, 0);
+            ctx.font = "10px monospace";
+            ctx.fillText(this.type.toUpperCase(), -15, 4);
             ctx.restore();
         }
     }
 
     function handleInput(x, y) {
         if(!gameActive) return;
-        trail.push({x, y, life: 1});
+        trail.push({x, y, life: 1.0});
 
         objects.forEach((obj, i) => {
-            if(Math.hypot(x - obj.x, y - obj.y) < 50) {
-                // Взрыв частиц
-                for(let p=0; p<15; p++) particles.push(new Particle(obj.x, obj.y, obj.color));
+            if(Math.hypot(x - obj.x, y - obj.y) < 45) {
+                for(let p=0; p<12; p++) particles.push(new Particle(obj.x, obj.y, obj.color));
                 
                 if (obj.type === 'err') {
-                    score = Math.max(0, score - 1000);
+                    score = Math.max(0, score - 500);
                     combo = 0;
-                    document.body.style.backgroundColor = "#300";
-                    setTimeout(() => document.body.style.backgroundColor = "#000", 100);
-                    if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+                    playHaptic('error');
+                    document.body.classList.add('glitch-active');
+                    setTimeout(() => document.body.classList.remove('glitch-active'), 200);
                 } else {
                     const now = Date.now();
-                    combo = (now - lastHit < 500) ? combo + 1 : 1;
+                    combo = (now - lastHit < 600) ? combo + 1 : 1;
                     lastHit = now;
                     
-                    let points = obj.type === 'gold' ? 500 : 150;
-                    score += points * combo;
-                    exp += (obj.type === 'gold' ? 10 : 3);
+                    let basePoints = obj.type === 'gold' ? 500 : 100;
+                    let addedScore = basePoints * combo;
+                    score += addedScore;
+                    exp += (obj.type === 'gold' ? 15 : 5);
                     
-                    document.body.classList.add('glitch-active');
-                    setTimeout(() => document.body.classList.remove('glitch-active'), 150);
-                    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+                    floatingTexts.push(new FloatingText(obj.x, obj.y, `+${addedScore}`, obj.color));
+                    playHaptic('success');
                 }
-                
                 objects.splice(i, 1);
                 updateUI();
             }
@@ -198,18 +235,25 @@
         document.getElementById('score-val').innerText = score.toLocaleString();
         document.getElementById('combo-ui').innerText = combo > 1 ? `COMBO X${combo}` : "";
         document.getElementById('bar-fill').style.width = Math.min(exp, 100) + "%";
-        if(exp >= 100) { level++; exp = 0; document.getElementById('lvl-num').innerText = level; }
+        if(exp >= 100) { 
+            level++; exp = 0; 
+            document.getElementById('lvl-num').innerText = level;
+            floatingTexts.push(new FloatingText(canvas.width/2, canvas.height/2, "LEVEL UP!", "#fff"));
+        }
     }
 
     function startLogs() {
-        const msg = ["ENCRYPTING...", "UPLINK_STABLE", "INJECTING_PAYLOAD", "BYPASSING_SEC", "NODE_0xFA_OPEN"];
+        const msg = ["BYPASSING...", "UPLINK: OK", "INJECTING...", "NODE_FOUND", "ROOT_ACCESS"];
         setInterval(() => {
             if(!gameActive) return;
             const l1 = document.getElementById('log-1');
-            l1.innerHTML = msg[Math.floor(Math.random()*msg.length)] + "<br>" + l1.innerHTML.split('<br>').slice(0, 2).join('<br>');
-        }, 1000);
+            const l2 = document.getElementById('log-2');
+            l1.innerText = msg[Math.floor(Math.random()*msg.length)];
+            l2.innerText = (Math.random().toString(16)).substring(2, 10).toUpperCase();
+        }, 1500);
     }
 
+    // Touch events
     window.addEventListener('touchmove', (e) => {
         e.preventDefault();
         handleInput(e.touches[0].clientX, e.touches[0].clientY);
@@ -217,12 +261,12 @@
 
     function gameLoop() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
         if(gameActive) {
-            // Отрисовка следа
+            // Trail
             if(trail.length > 1) {
                 ctx.beginPath();
-                ctx.strokeStyle = "#0ff"; ctx.lineWidth = 5;
-                ctx.shadowBlur = 15; ctx.shadowColor = "#0ff";
+                ctx.strokeStyle = "#33ff33"; ctx.lineWidth = 3;
                 ctx.moveTo(trail[0].x, trail[0].y);
                 for(let i=1; i<trail.length; i++) ctx.lineTo(trail[i].x, trail[i].y);
                 ctx.stroke();
@@ -230,15 +274,26 @@
                 trail = trail.filter(t => t.life > 0);
             }
 
-            if(Math.random() < 0.05 + (level*0.005)) objects.push(new DataNode());
+            // Spawn
+            if(Math.random() < 0.03 + (level * 0.005)) objects.push(new DataNode());
+
             objects.forEach((obj, i) => { 
                 obj.update(); obj.draw(); 
-                if(obj.y > canvas.height + 100) { objects.splice(i, 1); combo = 0; updateUI(); }
+                if(obj.y > canvas.height + 100) { 
+                    objects.splice(i, 1); 
+                    if(obj.type !== 'err') combo = 0; // Сброс комбо при пропуске цели
+                    updateUI();
+                }
             });
 
             particles.forEach((p, i) => {
                 p.update(); p.draw();
                 if(p.life <= 0) particles.splice(i, 1);
+            });
+
+            floatingTexts.forEach((ft, i) => {
+                ft.update(); ft.draw();
+                if(ft.life <= 0) floatingTexts.splice(i, 1);
             });
         }
         requestAnimationFrame(gameLoop);
