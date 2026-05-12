@@ -3,110 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Private IT Node // ZONE 2.0</title>
+    <title>Private IT Node // SLICE ZONE</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; padding: 0; background: #010a01; color: #00ff41; font-family: 'Courier New', monospace; overflow: hidden; height: 100vh; }
-        
-        /* Сетка на фоне */
-        #bg-grid {
-            position: absolute; width: 200%; height: 200%;
-            background-image: linear-gradient(rgba(0, 255, 65, 0.1) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(0, 255, 65, 0.1) 1px, transparent 1px);
-            background-size: 50px 50px;
-            transform: perspective(500px) rotateX(60deg);
-            top: -50%; left: -50%; z-index: 1;
-            animation: moveGrid 10s linear infinite;
-        }
-        @keyframes moveGrid { from { transform: perspective(500px) rotateX(60deg) translateY(0); } to { transform: perspective(500px) rotateX(60deg) translateY(50px); } }
-
-        #ui { position: relative; z-index: 10; text-align: center; padding: 15px; background: rgba(0,0,0,0.9); border-bottom: 2px solid #00ff41; box-shadow: 0 5px 20px rgba(0,255,65,0.2); }
-        
-        #leaderboard {
-            margin: 10px auto; width: 90%; background: rgba(0, 20, 0, 0.8);
-            border: 1px solid #00ff41; border-radius: 8px; padding: 8px; font-size: 11px;
-        }
-        .leader-item { display: flex; justify-content: space-between; margin: 2px 0; }
-        .user-rank { color: #fff; border-top: 1px dashed #00ff41; margin-top: 5px; padding-top: 5px; font-weight: bold; }
-
-        .node { 
-            position: absolute; width: 90px; height: 90px; z-index: 20;
-            display: flex; align-items: center; justify-content: center;
-            filter: drop-shadow(0 0 15px #00ff41); touch-action: none;
-            transition: all 0.1s;
-        }
-        
-        .shape-0 { border-radius: 50%; border: 3px solid #00ff41; }
-        .shape-1 { clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%); background: rgba(0,255,65,0.2); }
-        .shape-2 { clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%); border: 2px solid #fff; }
-
-        .scan-line { position: absolute; width: 100%; height: 2px; background: #00ff41; opacity: 0.3; z-index: 5; animation: scan 3s linear infinite; }
-        @keyframes scan { from { top: 0%; } to { top: 100%; } }
+        body { margin: 0; padding: 0; background: #010a01; color: #00ff41; font-family: monospace; overflow: hidden; height: 100vh; touch-action: none; }
+        canvas { position: absolute; top: 0; left: 0; z-index: 5; }
+        #ui { position: relative; z-index: 10; text-align: center; padding: 15px; background: rgba(0,0,0,0.8); border-bottom: 2px solid #00ff41; pointer-events: none; }
+        #score-val { font-size: 32px; color: #fff; text-shadow: 0 0 10px #00ff41; }
     </style>
 </head>
 <body>
-    <div id="bg-grid"></div>
-    <div class="scan-line"></div>
-
     <div id="ui">
-        <div style="font-size: 12px; opacity: 0.7;">PRIVATE IT NODE // SECTOR_01</div>
-        <div style="font-size: 26px; color: #fff; margin: 5px 0;">[ <span id="score">0</span> ] NODES</div>
-        
-        <div id="leaderboard">
-            <div class="leader-item" style="color:#ffd700"><span>👑 @DPI_REBEL</span> <span>4,310</span></div>
-            <div class="leader-item"><span>🥈 @UAE_CYBER</span> <span>3,980</span></div>
-            <div class="leader-item"><span>🥉 @PROXY_KNGT</span> <span>3,150</span></div>
-            <div class="leader-item user-rank"><span>YOU: #142</span> <span><span id="user-score-view">0</span> NODES</span></div>
-        </div>
+        <div style="letter-spacing: 2px;">FIREWALL SLICER // V2.0</div>
+        <div id="score-val">0</div>
+        <div style="font-size: 10px; opacity: 0.6;">SLICE THE NODES TO PROTECT TRAFFIC</div>
     </div>
+    <canvas id="gameCanvas"></canvas>
 
-    <div id="node" class="node shape-0"></div>
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-        const scoreEl = document.getElementById('score');
-        const userScoreView = document.getElementById('user-score-view');
-        const node = document.getElementById('node');
-        let score = 0;
+    let score = 0;
+    let objects = [];
+    let trail = []; // След от свайпа
 
-        function playSound() {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const osc = ctx.createOscillator();
-            const g = ctx.createGain();
-            osc.frequency.setValueAtTime(400 + Math.random()*200, ctx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(10, ctx.currentTime + 0.1);
-            g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-            osc.connect(g); g.connect(ctx.destination);
-            osc.start(); osc.stop(ctx.currentTime + 0.1);
+    // Аудио движок
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playSliceSound() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
+        g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    }
+
+    class DataNode {
+        constructor() {
+            this.x = Math.random() * canvas.width;
+            this.y = canvas.height + 50;
+            this.size = 30 + Math.random() * 20;
+            this.speedX = (Math.random() - 0.5) * 4;
+            this.speedY = - (12 + Math.random() * 5);
+            this.gravity = 0.25;
+            this.isSliced = false;
+            this.color = score > 50 ? "#ff0044" : "#00ff41";
         }
-
-        function spawnNode() {
-            node.className = 'node shape-' + Math.floor(Math.random() * 3);
-            const x = Math.random() * (window.innerWidth - 100);
-            const y = Math.random() * (window.innerHeight - 300) + 180;
-            node.style.left = x + 'px';
-            node.style.top = y + 'px';
-            
-            // Цветовая индикация прогресса
-            let color = "#00ff41";
-            if (score > 50) color = "#00d4ff";
-            if (score > 100) color = "#ff0044";
-            node.style.borderColor = color;
-            node.style.boxShadow = `0 0 25px ${color}`;
+        update() {
+            this.x += this.speedX;
+            this.speedY += this.gravity;
+            this.y += this.speedY;
         }
+        draw() {
+            ctx.shadowBlur = 15; ctx.shadowColor = this.color;
+            ctx.strokeStyle = this.color; ctx.lineWidth = 3;
+            if (!this.isSliced) {
+                ctx.strokeRect(this.x, this.y, this.size, this.size);
+            } else {
+                // Рисуем половинки, если разрезано
+                ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + this.size, this.y + this.size); ctx.stroke();
+            }
+        }
+    }
 
-        node.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            score++;
-            scoreEl.innerText = score;
-            userScoreView.innerText = score;
-            playSound();
-            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-            spawnNode();
+    function handleInput(ex, ey) {
+        trail.push({x: ex, y: ey, life: 10});
+        if (trail.length > 10) trail.shift();
+
+        objects.forEach(obj => {
+            if (!obj.isSliced && ex > obj.x && ex < obj.x + obj.size && ey > obj.y && ey < obj.y + obj.size) {
+                obj.isSliced = true;
+                score++;
+                document.getElementById('score-val').innerText = score;
+                playSliceSound();
+                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+            }
+        });
+    }
+
+    window.addEventListener('touchmove', (e) => {
+        const touch = e.touches[0];
+        handleInput(touch.clientX, touch.clientY);
+    });
+
+    function gameLoop() {
+        ctx.fillStyle = "rgba(1, 10, 1, 0.3)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Отрисовка следа (свайпа)
+        ctx.beginPath();
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = 4;
+        for(let i=0; i<trail.length; i++) {
+            ctx.lineTo(trail[i].x, trail[i].y);
+        }
+        ctx.stroke();
+
+        if (Math.random() < 0.03) objects.push(new DataNode());
+
+        objects.forEach((obj, index) => {
+            obj.update();
+            obj.draw();
+            if (obj.y > canvas.height + 100) objects.splice(index, 1);
         });
 
-        spawnNode();
-    </script>
+        requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+</script>
 </body>
 </html>
