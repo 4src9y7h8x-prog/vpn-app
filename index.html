@@ -9,34 +9,56 @@
         body { margin: 0; padding: 0; background: #010a01; color: #00ff41; font-family: monospace; overflow: hidden; height: 100vh; touch-action: none; }
         canvas { position: absolute; top: 0; left: 0; z-index: 5; }
         #ui { position: relative; z-index: 10; text-align: center; padding: 15px; background: rgba(0,0,0,0.8); border-bottom: 2px solid #00ff41; pointer-events: none; }
-        #score-val { font-size: 32px; color: #fff; text-shadow: 0 0 10px #00ff41; }
+        #score-val { font-size: 36px; color: #fff; text-shadow: 0 0 15px #00ff41; }
+        #start-prompt { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 100; text-align: center; font-size: 18px; background: rgba(0,0,0,0.9);
+            padding: 20px; border: 1px solid #00ff41; cursor: pointer;
+        }
     </style>
 </head>
 <body>
+    <div id="start-prompt">🦾 НАЖМИ, ЧТОБЫ ЗАПУСТИТЬ УЗЛЫ</div>
+    
     <div id="ui">
-        <div style="letter-spacing: 2px;">FIREWALL SLICER // V2.0</div>
+        <div style="letter-spacing: 2px;">FIREWALL SLICER // CORE</div>
         <div id="score-val">0</div>
-        <div style="font-size: 10px; opacity: 0.6;">SLICE THE NODES TO PROTECT TRAFFIC</div>
     </div>
+    
     <canvas id="gameCanvas"></canvas>
+    
+    <!-- Музыка (назови файл music.mp3 на гитхабе) -->
+    <audio id="bgMusic" src="music.mp3" loop></audio>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
+    
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+    const music = document.getElementById('bgMusic');
+    const startPrompt = document.getElementById('start-prompt');
+    
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
     let score = 0;
     let objects = [];
-    let trail = []; // След от свайпа
+    let trail = []; 
+    let gameActive = false;
 
-    // Аудио движок
+    // Запуск игры по клику (нужно для музыки и звука)
+    startPrompt.addEventListener('click', () => {
+        gameActive = true;
+        startPrompt.style.display = 'none';
+        music.play().catch(() => console.log("Музыка не найдена, играем без неё"));
+        if (window.AudioContext || window.webkitAudioContext) {
+            audioCtx.resume();
+        }
+    });
+
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    
     function playSliceSound() {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
         const osc = audioCtx.createOscillator();
         const g = audioCtx.createGain();
         osc.type = 'sawtooth';
@@ -50,43 +72,54 @@
 
     class DataNode {
         constructor() {
-            this.x = Math.random() * canvas.width;
+            this.x = 50 + Math.random() * (canvas.width - 100);
             this.y = canvas.height + 50;
-            this.size = 30 + Math.random() * 20;
-            this.speedX = (Math.random() - 0.5) * 4;
-            this.speedY = - (12 + Math.random() * 5);
-            this.gravity = 0.25;
+            this.size = 40 + Math.random() * 20;
+            this.speedX = (Math.random() - 0.5) * 6;
+            this.speedY = - (14 + Math.random() * 6); // Сила вылета
+            this.gravity = 0.3;
             this.isSliced = false;
-            this.color = score > 50 ? "#ff0044" : "#00ff41";
+            this.rotation = 0;
+            this.rotSpeed = (Math.random() - 0.5) * 0.1;
         }
         update() {
             this.x += this.speedX;
             this.speedY += this.gravity;
             this.y += this.speedY;
+            this.rotation += this.rotSpeed;
         }
         draw() {
-            ctx.shadowBlur = 15; ctx.shadowColor = this.color;
-            ctx.strokeStyle = this.color; ctx.lineWidth = 3;
+            ctx.save();
+            ctx.translate(this.x + this.size/2, this.y + this.size/2);
+            ctx.rotate(this.rotation);
+            ctx.shadowBlur = 15; ctx.shadowColor = "#00ff41";
+            ctx.strokeStyle = "#00ff41"; ctx.lineWidth = 3;
+            
             if (!this.isSliced) {
-                ctx.strokeRect(this.x, this.y, this.size, this.size);
+                ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
             } else {
-                // Рисуем половинки, если разрезано
-                ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + this.size, this.y + this.size); ctx.stroke();
+                // Две половинки при разрезе
+                ctx.beginPath(); ctx.moveTo(-this.size, 0); ctx.lineTo(this.size, 0); ctx.stroke();
             }
+            ctx.restore();
         }
     }
 
     function handleInput(ex, ey) {
-        trail.push({x: ex, y: ey, life: 10});
-        if (trail.length > 10) trail.shift();
+        if (!gameActive) return;
+        trail.push({x: ex, y: ey, life: 1.0});
 
         objects.forEach(obj => {
-            if (!obj.isSliced && ex > obj.x && ex < obj.x + obj.size && ey > obj.y && ey < obj.y + obj.size) {
+            let dx = ex - (obj.x + obj.size/2);
+            let dy = ey - (obj.y + obj.size/2);
+            let dist = Math.sqrt(dx*dx + dy*dy);
+
+            if (!obj.isSliced && dist < obj.size) {
                 obj.isSliced = true;
                 score++;
                 document.getElementById('score-val').innerText = score;
                 playSliceSound();
-                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
             }
         });
     }
@@ -97,24 +130,32 @@
     });
 
     function gameLoop() {
-        ctx.fillStyle = "rgba(1, 10, 1, 0.3)";
+        ctx.fillStyle = "rgba(1, 10, 1, 0.4)"; // Эффект шлейфа
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Отрисовка следа (свайпа)
-        ctx.beginPath();
-        ctx.strokeStyle = "#fff"; ctx.lineWidth = 4;
-        for(let i=0; i<trail.length; i++) {
-            ctx.lineTo(trail[i].x, trail[i].y);
+        if (gameActive) {
+            // Отрисовка следа свайпа
+            if (trail.length > 1) {
+                ctx.beginPath();
+                ctx.strokeStyle = "#fff"; ctx.lineWidth = 5; ctx.lineCap = "round";
+                ctx.moveTo(trail[0].x, trail[0].y);
+                for(let i=1; i<trail.length; i++) {
+                    ctx.lineTo(trail[i].x, trail[i].y);
+                    trail[i].life -= 0.1;
+                }
+                ctx.stroke();
+                trail = trail.filter(t => t.life > 0);
+            }
+
+            // Частота появления (бананов) узлов
+            if (Math.random() < 0.05) objects.push(new DataNode());
+
+            objects.forEach((obj, index) => {
+                obj.update();
+                obj.draw();
+                if (obj.y > canvas.height + 150) objects.splice(index, 1);
+            });
         }
-        ctx.stroke();
-
-        if (Math.random() < 0.03) objects.push(new DataNode());
-
-        objects.forEach((obj, index) => {
-            obj.update();
-            obj.draw();
-            if (obj.y > canvas.height + 100) objects.splice(index, 1);
-        });
 
         requestAnimationFrame(gameLoop);
     }
