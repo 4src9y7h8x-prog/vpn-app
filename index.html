@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>PRIVATE IT NODE // ELITE SLICER v3.0</title>
+    <title>PRIVATE IT NODE // ELITE SLICER v4.0 PRO</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
             --neon-green: #00ff41;
             --neon-red: #ff003c;
             --neon-gold: #ffcc00;
-            --bg-dark: #0a0a0a;
+            --neon-blue: #00f2ff;
         }
 
         body { 
@@ -18,108 +18,69 @@
             font-family: 'Courier New', monospace; overflow: hidden; 
             height: 100vh; touch-action: none; user-select: none;
         }
-        
-        /* Фон с картинкой и затемнением */
-        #bg-container {
-            position: fixed; inset: 0;
-            background: url('IMG_2080.png') no-repeat center center;
-            background-size: cover;
-            z-index: 0;
-        }
-        #bg-overlay {
-            position: absolute; inset: 0;
-            background: radial-gradient(circle, rgba(0,20,0,0.4) 0%, rgba(0,0,0,0.9) 100%);
-            z-index: 1;
-        }
 
-        /* Слой для матричного дождя */
-        #matrix-canvas { position: absolute; inset: 0; z-index: 2; opacity: 0.15; }
-
+        #bg-container { position: fixed; inset: 0; background: url('IMG_2080.png') no-repeat center center; background-size: cover; z-index: 0; }
+        #bg-overlay { position: absolute; inset: 0; background: radial-gradient(circle, rgba(0,20,0,0.3) 0%, rgba(0,0,0,0.95) 100%); z-index: 1; }
+        canvas#matrix-canvas { position: absolute; inset: 0; z-index: 2; opacity: 0.1; }
         canvas#gameCanvas { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
 
-        /* Эффект старого монитора */
-        .crt-overlay {
-            position: fixed; inset: 0; z-index: 100; pointer-events: none;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-            background-size: 100% 3px, 2px 100%;
-        }
+        /* Эффекты окружения */
+        .crt-overlay { position: fixed; inset: 0; z-index: 100; pointer-events: none; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02)); background-size: 100% 3px, 3px 100%; }
+        
+        #ui-header { position: relative; z-index: 50; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        
+        /* Кастомные бары */
+        .stats-row { display: flex; justify-content: space-between; align-items: flex-end; }
+        .score-container { line-height: 0.8; }
+        #score-val { font-size: 55px; font-weight: 900; color: #fff; text-shadow: 0 0 20px var(--neon-green); font-family: 'Arial Black', sans-serif; }
+        
+        .bars-group { display: flex; flex-direction: column; gap: 5px; width: 150px; }
+        .bar-wrapper { height: 10px; background: rgba(0,40,0,0.6); border: 1px solid var(--neon-green); position: relative; overflow: hidden; }
+        #exp-bar { width: 0%; height: 100%; background: var(--neon-green); transition: width 0.3s; }
+        #overdrive-bar { width: 0%; height: 100%; background: var(--neon-blue); box-shadow: 0 0 10px var(--neon-blue); }
 
-        #ui-header {
-            position: relative; z-index: 50; padding: 20px;
-            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
-        }
+        /* Режим Overdrive */
+        .overdrive-active { animation: overdrive-pulse 0.5s infinite; filter: contrast(1.5) saturate(1.5) !important; }
+        @keyframes overdrive-pulse { 0% { box-shadow: inset 0 0 50px rgba(0,242,255,0.2); } 50% { box-shadow: inset 0 0 100px rgba(0,242,255,0.5); } 100% { box-shadow: inset 0 0 50px rgba(0,242,255,0.2); } }
 
-        #score-val { 
-            font-size: 64px; font-weight: 900; color: #fff; line-height: 0.8;
-            text-shadow: 0 0 20px var(--neon-green); font-family: 'Arial Black', sans-serif;
-        }
+        #start-screen { position: fixed; inset: 0; z-index: 1000; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .btn-main { background: var(--neon-green); color: #000; border: none; padding: 20px 50px; font-size: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 0 30px var(--neon-green); font-family: 'Courier New'; }
 
-        .bar-container { width: 140px; height: 12px; background: rgba(0,50,0,0.5); border: 1px solid var(--neon-green); margin-top: 5px; position: relative; }
-        #bar-fill { width: 0%; height: 100%; background: var(--neon-green); box-shadow: 0 0 15px var(--neon-green); transition: width 0.2s; }
-
-        #start-screen {
-            position: fixed; inset: 0; z-index: 1000; background: var(--bg-dark);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-
-        .glitch-btn {
-            background: var(--neon-green); color: #000; border: none; padding: 20px 60px;
-            font-size: 20px; font-family: 'Courier New', monospace; font-weight: bold;
-            box-shadow: 0 0 40px var(--neon-green); cursor: pointer; transition: 0.2s;
-        }
-        .glitch-btn:active { transform: scale(0.95); filter: hue-rotate(90deg); }
-
-        .monitor {
-            width: 44%; background: rgba(0, 30, 0, 0.6); border-left: 3px solid var(--neon-green);
-            padding: 10px; font-size: 10px; height: 65px; overflow: hidden; backdrop-filter: blur(5px);
-        }
-
-        @keyframes shake {
-            0% { transform: translate(0,0); }
-            25% { transform: translate(5px,5px); }
-            50% { transform: translate(-5px,0); }
-            75% { transform: translate(0,-5px); }
-            100% { transform: translate(0,0); }
-        }
-        .shake-active { animation: shake 0.15s cubic-bezier(.36,.07,.19,.97) both; }
+        .monitor { width: 45%; background: rgba(0,20,0,0.8); border: 1px solid var(--neon-green); padding: 8px; font-size: 10px; height: 60px; overflow: hidden; backdrop-filter: blur(5px); }
     </style>
 </head>
-<body>
+<body id="game-body">
 
-    <div id="bg-container">
-        <div id="bg-overlay"></div>
-        <canvas id="matrix-canvas"></canvas>
-    </div>
-
+    <div id="bg-container"><div id="bg-overlay"></div><canvas id="matrix-canvas"></canvas></div>
     <div class="crt-overlay"></div>
 
     <div id="start-screen">
-        <h1 style="letter-spacing: 5px; margin-bottom: 30px;">ELITE_SLICER v3.0</h1>
-        <button id="start-btn" class="glitch-btn">RUN EXECUTABLE</button>
-        <p style="margin-top: 20px; opacity: 0.5; font-size: 12px;">UNAUTHORIZED ACCESS DETECTED</p>
+        <h1 style="text-shadow: 0 0 15px var(--neon-green); margin-bottom: 5px;">SYSTEM_SLICER</h1>
+        <p style="color: var(--neon-blue); margin-bottom: 30px; font-size: 12px;">ENCRYPTED SESSION v4.0</p>
+        <button id="start-btn" class="btn-main">INITIALIZE</button>
     </div>
 
     <div id="ui-header">
-        <div style="display: flex; justify-content: space-between; font-size: 11px;">
-            <span>NODE_ID: 0x77-SLICER</span>
-            <span id="combo-ui" style="color: var(--neon-gold); font-weight: bold;"></span>
-        </div>
-        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-            <div>
-                <div style="font-size: 10px; opacity: 0.6;">DATA_HARVESTED</div>
+        <div class="stats-row">
+            <div class="score-container">
+                <div style="font-size: 10px; opacity: 0.6; color: var(--neon-blue);">RECOVERED_DATA:</div>
                 <div id="score-val">0</div>
+                <div id="combo-ui" style="font-size: 16px; color: var(--neon-gold); font-weight: bold; height: 20px;"></div>
             </div>
-            <div style="text-align: right;">
-                <div style="font-size: 11px;">SEC_LEVEL: <span id="lvl-num">1</span></div>
-                <div class="bar-container"><div id="bar-fill"></div></div>
+            <div class="bars-group">
+                <div style="font-size: 9px; display: flex; justify-content: space-between;">
+                    <span>SECURITY_BYPASS</span><span id="lvl-num">L1</span>
+                </div>
+                <div class="bar-wrapper"><div id="exp-bar"></div></div>
+                <div style="font-size: 9px; color: var(--neon-blue);">OVERDRIVE_LINK</div>
+                <div class="bar-wrapper"><div id="overdrive-bar"></div></div>
             </div>
         </div>
     </div>
 
-    <div id="ui-footer" style="position: absolute; bottom: 40px; width: 100%; display: flex; justify-content: space-around; z-index: 50;">
-        <div class="monitor">[LOG_STREAM]<br><div id="log-1">...</div></div>
-        <div class="monitor">[REMOTE_IP]<br><div id="log-2">...</div></div>
+    <div id="ui-footer" style="position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: space-around; z-index: 50;">
+        <div class="monitor">[SYSTEM_LOGS]<br><div id="log-1">IDLE...</div></div>
+        <div class="monitor">[TRAFFIC_ANALYSIS]<br><div id="log-2">...</div></div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -132,76 +93,85 @@
     const ctx = canvas.getContext('2d');
     const mCanvas = document.getElementById('matrix-canvas');
     const mCtx = mCanvas.getContext('2d');
+    const body = document.getElementById('game-body');
 
     let score = 0, level = 1, exp = 0, gameActive = false;
+    let overdrive = 0, isOverdrive = false;
     let objects = [], trail = [], particles = [], floatingTexts = [];
     let combo = 0, lastHit = 0;
 
-    // Настройка аудио
     const bgMusic = new Audio('music.mp3');
     bgMusic.loop = true;
 
-    // Матричный фон
-    mCanvas.width = window.innerWidth;
-    mCanvas.height = window.innerHeight;
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$#@%&*";
+    // Matrix Background logic
+    mCanvas.width = window.innerWidth; mCanvas.height = window.innerHeight;
     const drops = Array(Math.floor(mCanvas.width/20)).fill(1);
-
     function drawMatrix() {
-        mCtx.fillStyle = "rgba(0, 0, 0, 0.05)";
-        mCtx.fillRect(0, 0, mCanvas.width, mCanvas.height);
-        mCtx.fillStyle = "#0F0";
+        mCtx.fillStyle = "rgba(0, 0, 0, 0.1)"; mCtx.fillRect(0, 0, mCanvas.width, mCanvas.height);
+        mCtx.fillStyle = isOverdrive ? "#0ff" : "#0f0";
         mCtx.font = "15px monospace";
         drops.forEach((y, i) => {
-            const text = chars[Math.floor(Math.random()*chars.length)];
+            const text = String.fromCharCode(0x30A0 + Math.random() * 96);
             mCtx.fillText(text, i*20, y*20);
             if(y*20 > mCanvas.height && Math.random() > 0.975) drops[i] = 0;
             drops[i]++;
         });
     }
 
-    // Классы игры
     class Particle {
         constructor(x, y, color) {
             this.x = x; this.y = y;
-            this.sx = (Math.random() - 0.5) * 15;
-            this.sy = (Math.random() - 0.5) * 15;
-            this.life = 1.0;
-            this.color = color;
+            this.sx = (Math.random() - 0.5) * (isOverdrive ? 25 : 12);
+            this.sy = (Math.random() - 0.5) * (isOverdrive ? 25 : 12);
+            this.life = 1.0; this.color = color;
         }
         update() { this.x += this.sx; this.y += this.sy; this.life -= 0.04; }
         draw() {
             ctx.fillStyle = this.color.replace('rgb', 'rgba').replace(')', `, ${this.life})`);
-            ctx.fillRect(this.x, this.y, 3, 3);
+            ctx.fillRect(this.x, this.y, isOverdrive ? 4 : 2, isOverdrive ? 4 : 2);
         }
     }
 
     class DataNode {
         constructor() {
             this.size = 50;
-            this.x = Math.random() * (window.innerWidth - 100) + 50;
+            this.x = Math.random() * (window.innerWidth - 80) + 40;
             this.y = window.innerHeight + 50;
-            this.sy = -(14 + Math.random() * 5 + level);
-            this.sx = (Math.random() - 0.5) * 4;
-            this.rot = 0;
-            this.rotV = (Math.random() - 0.5) * 0.2;
+            this.sy = isOverdrive ? -(22 + Math.random() * 10) : -(14 + Math.random() * 5 + level);
+            this.sx = (Math.random() - 0.5) * 5;
+            this.rot = 0; this.rotV = (Math.random() - 0.5) * 0.3;
             
             const r = Math.random();
-            if (r < 0.15) { this.type = 'err'; this.color = 'rgb(255, 0, 60)'; }
+            if (r < 0.12) { this.type = 'err'; this.color = 'rgb(255, 0, 60)'; }
             else if (r > 0.9) { this.type = 'gold'; this.color = 'rgb(255, 204, 0)'; }
-            else { this.type = 'data'; this.color = 'rgb(0, 255, 65)'; }
+            else { this.type = 'data'; this.color = isOverdrive ? 'rgb(0, 242, 255)' : 'rgb(0, 255, 65)'; }
         }
         update() { this.x += this.sx; this.sy += 0.4; this.y += this.sy; this.rot += this.rotV; }
         draw() {
-            ctx.save();
-            ctx.translate(this.x, this.y);
-            ctx.rotate(this.rot);
-            ctx.strokeStyle = this.color;
-            ctx.lineWidth = 3;
+            ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rot);
+            ctx.strokeStyle = this.color; ctx.lineWidth = isOverdrive ? 5 : 3;
             ctx.shadowBlur = 15; ctx.shadowColor = this.color;
             ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
+            if(isOverdrive) { ctx.strokeRect(-this.size/3, -this.size/3, this.size/1.5, this.size/1.5); }
             ctx.restore();
         }
+    }
+
+    function triggerOverdrive() {
+        isOverdrive = true;
+        overdrive = 100;
+        body.classList.add('overdrive-active');
+        if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        
+        const timer = setInterval(() => {
+            overdrive -= 1.5;
+            document.getElementById('overdrive-bar').style.width = overdrive + "%";
+            if(overdrive <= 0) {
+                clearInterval(timer);
+                isOverdrive = false;
+                body.classList.remove('overdrive-active');
+            }
+        }, 100);
     }
 
     function handleInput(x, y) {
@@ -209,27 +179,30 @@
         trail.push({x, y, life: 1.0});
 
         objects.forEach((obj, i) => {
-            const dist = Math.hypot(x - obj.x, y - obj.y);
-            if(dist < 50) {
-                for(let p=0; p<15; p++) particles.push(new Particle(obj.x, obj.y, obj.color));
+            if(Math.hypot(x - obj.x, y - obj.y) < 55) {
+                for(let p=0; p<20; p++) particles.push(new Particle(obj.x, obj.y, obj.color));
                 
-                if (obj.type === 'err') {
-                    score = Math.max(0, score - 1000);
+                if (obj.type === 'err' && !isOverdrive) {
+                    score = Math.max(0, score - 2000);
                     combo = 0;
-                    document.body.classList.add('shake-active');
-                    setTimeout(() => document.body.classList.remove('shake-active'), 200);
+                    overdrive = Math.max(0, overdrive - 20);
                     if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
                 } else {
                     const now = Date.now();
                     combo = (now - lastHit < 500) ? combo + 1 : 1;
                     lastHit = now;
                     
-                    let pts = obj.type === 'gold' ? 500 : 150;
+                    let pts = (obj.type === 'gold' ? 1000 : 200) * (isOverdrive ? 2 : 1);
                     score += pts * combo;
-                    exp += (obj.type === 'gold' ? 20 : 8);
+                    exp += (obj.type === 'gold' ? 15 : 5);
                     
+                    if(!isOverdrive) {
+                        overdrive = Math.min(100, overdrive + 2 + (combo * 0.5));
+                        if(overdrive >= 100) triggerOverdrive();
+                    }
+
                     floatingTexts.push({x: obj.x, y: obj.y, text: `+${pts*combo}`, color: obj.color, life: 1});
-                    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+                    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
                 }
                 objects.splice(i, 1);
                 updateUI();
@@ -239,67 +212,65 @@
 
     function updateUI() {
         document.getElementById('score-val').innerText = score.toLocaleString();
-        document.getElementById('combo-ui').innerText = combo > 1 ? `X${combo} COMBO` : "";
-        document.getElementById('bar-fill').style.width = Math.min(exp, 100) + "%";
+        document.getElementById('combo-ui').innerText = combo > 1 ? `COMBO X${combo}` : "";
+        document.getElementById('exp-bar').style.width = exp + "%";
+        if(!isOverdrive) document.getElementById('overdrive-bar').style.width = overdrive + "%";
+        
         if(exp >= 100) {
             level++; exp = 0;
-            document.getElementById('lvl-num').innerText = level;
-            floatingTexts.push({x: window.innerWidth/2 - 50, y: window.innerHeight/2, text: "SEC_BREACHED", color: "#fff", life: 2});
+            document.getElementById('lvl-num').innerText = "L" + level;
+            floatingTexts.push({x: window.innerWidth/2 - 40, y: window.innerHeight/2, text: "LEVEL UP", color: "#fff", life: 2});
         }
     }
 
     document.getElementById('start-btn').onclick = () => {
         gameActive = true;
         document.getElementById('start-screen').style.display = 'none';
-        bgMusic.play().catch(e => console.log("Audio waiting for interaction"));
+        bgMusic.play().catch(() => {});
         
-        // Логи
         setInterval(() => {
-            document.getElementById('log-1').innerHTML = ["TUNNELING...", "ROOT_FOUND", "ENCRYPTING", "BYPASSING"][Math.floor(Math.random()*4)] + "<br>" + document.getElementById('log-1').innerHTML;
-            document.getElementById('log-2').innerText = `192.168.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
-        }, 2000);
+            const logs = ["SCRAPING DATA...", "BYPASSING FIREWALL", "UPLINK STABLE", "EXTRACTING..."];
+            document.getElementById('log-1').innerText = logs[Math.floor(Math.random()*logs.length)];
+            document.getElementById('log-2').innerText = (Math.random()*100).toFixed(4) + " GB/s";
+        }, 1500);
     };
 
-    window.addEventListener('touchstart', (e) => handleInput(e.touches[0].clientX, e.touches[0].clientY));
     window.addEventListener('touchmove', (e) => {
         e.preventDefault();
         handleInput(e.touches[0].clientX, e.touches[0].clientY);
     }, {passive: false});
 
     function gameLoop() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-        
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
         drawMatrix();
 
         if(gameActive) {
-            // Trail
             if(trail.length > 1) {
                 ctx.beginPath();
-                ctx.strokeStyle = "#fff"; ctx.lineWidth = 4;
+                ctx.strokeStyle = isOverdrive ? var(--neon-blue) : "#fff";
+                ctx.lineWidth = isOverdrive ? 8 : 4;
                 ctx.moveTo(trail[0].x, trail[0].y);
                 for(let i=1; i<trail.length; i++) ctx.lineTo(trail[i].x, trail[i].y);
                 ctx.stroke();
-                trail.forEach(t => t.life -= 0.15);
+                trail.forEach(t => t.life -= 0.12);
                 trail = trail.filter(t => t.life > 0);
             }
 
-            // Spawn
-            if(Math.random() < 0.04 + (level * 0.005)) objects.push(new DataNode());
+            const spawnRate = isOverdrive ? 0.15 : (0.04 + level * 0.005);
+            if(Math.random() < spawnRate) objects.push(new DataNode());
 
             objects.forEach((obj, i) => {
                 obj.update(); obj.draw();
-                if(obj.y > window.innerHeight + 100) { objects.splice(i, 1); combo = 0; updateUI(); }
+                if(obj.y > window.innerHeight + 100) {
+                    objects.splice(i, 1);
+                    if(obj.type !== 'err') combo = 0;
+                    updateUI();
+                }
             });
 
-            particles.forEach((p, i) => {
-                p.update(); p.draw();
-                if(p.life <= 0) particles.splice(i, 1);
-            });
-
+            particles.forEach((p, i) => { p.update(); p.draw(); if(p.life <= 0) particles.splice(i, 1); });
             floatingTexts.forEach((ft, i) => {
-                ctx.fillStyle = ft.color;
-                ctx.font = "bold 20px monospace";
+                ctx.fillStyle = ft.color; ctx.font = "bold 20px Courier New";
                 ctx.fillText(ft.text, ft.x, ft.y);
                 ft.y -= 2; ft.life -= 0.03;
                 if(ft.life <= 0) floatingTexts.splice(i, 1);
@@ -307,7 +278,6 @@
         }
         requestAnimationFrame(gameLoop);
     }
-
     gameLoop();
 </script>
 </body>
