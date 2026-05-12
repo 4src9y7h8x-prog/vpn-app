@@ -3,130 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Private IT Node Anti-Stress</title>
+    <title>Private IT Node // ZONE 2.0</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { margin: 0; padding: 0; background: #020502; color: #00ff41; font-family: 'Courier New', monospace; overflow: hidden; height: 100vh; }
-        canvas { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
+        canvas { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; opacity: 0.4; }
         
-        /* Линия сканера */
-        body::after {
-            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
-            background: rgba(0, 255, 65, 0.1); box-shadow: 0 0 10px #00ff41;
-            z-index: 5; animation: scan 4s linear infinite;
+        #ui { position: relative; z-index: 10; text-align: center; padding: 15px; background: rgba(0,0,0,0.9); border-bottom: 2px solid #00ff41; }
+        
+        /* Лидерборд как на картинке */
+        #leaderboard {
+            margin: 10px auto; width: 90%; background: rgba(0, 40, 0, 0.3);
+            border: 1px solid #00ff41; border-radius: 10px; padding: 10px;
+            font-size: 12px; text-align: left; box-shadow: inset 0 0 10px #00ff41;
         }
-        @keyframes scan { from { top: 0; } to { top: 100%; } }
+        .leader-item { display: flex; justify-content: space-between; margin: 3px 0; border-bottom: 1px hideen rgba(0,255,65,0.1); }
+        .gold { color: #ffd700; font-weight: bold; }
 
-        #ui { position: relative; z-index: 10; text-align: center; padding: 20px; border-bottom: 1px solid #00ff41; background: rgba(0,0,0,0.85); transition: transform 0.1s; }
-        
+        .node-container { position: relative; width: 100%; height: 50vh; display: flex; align-items: center; justify-content: center; }
         .node { 
-            position: absolute; width: 75px; height: 75px; 
+            width: 100px; height: 100px; z-index: 20; touch-action: none;
             display: flex; align-items: center; justify-content: center;
-            z-index: 20; touch-action: none;
+            filter: drop-shadow(0 0 15px #00ff41);
         }
         
-        .shape-0 { border-radius: 50%; }
-        .shape-1 { border-radius: 5px; }
-        .shape-2 { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
-        .shape-3 { clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0% 50%); }
+        /* Сложные фигуры из промпта */
+        .shape-0 { border-radius: 50%; border: 4px double #00ff41; }
+        .shape-1 { clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%); border: 2px solid #00ff41; }
+        .shape-2 { clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%); background: rgba(0,255,65,0.2); }
 
-        #log { font-size: 11px; color: #00ff41; text-transform: uppercase; margin-top: 8px; font-weight: bold; }
+        .scan-line {
+            position: absolute; width: 100%; height: 1px; background: #00ff41;
+            box-shadow: 0 0 8px #00ff41; z-index: 5; animation: scan 3s linear infinite;
+        }
+        @keyframes scan { from { top: 0%; } to { top: 100%; } }
     </style>
 </head>
 <body>
-    <canvas id="mainCanvas"></canvas>
+    <div class="scan-line"></div>
+    <canvas id="matrix"></canvas>
+
     <div id="ui">
-        <div style="font-size: 14px; letter-spacing: 3px;">SYSTEM.CORE.ACCESS</div>
-        <div style="font-size: 28px; font-weight: bold; color: #fff;">[ <span id="score">0</span> ]</div>
-        <div id="log">READY TO SCAN</div>
+        <div style="letter-spacing: 2px; font-size: 14px;">PRIVATE IT NODE // ZONE</div>
+        <div style="font-size: 24px; color: #fff; margin: 5px 0;">[ <span id="score">0</span> ] NODES CAPTURED</div>
+        
+        <div id="leaderboard">
+            <div style="text-align: center; border-bottom: 1px solid #00ff41; margin-bottom: 5px;">CAPTURE LEADERBOARD (TOP 3)</div>
+            <div class="leader-item gold"><span>👑 @DPI_REBEL</span> <span>4,310</span></div>
+            <div class="leader-item"><span>🥈 @UAE_CYBER</span> <span>3,980</span></div>
+            <div class="leader-item"><span>🥉 @PROXY_KNGT</span> <span>3,150</span></div>
+        </div>
     </div>
-    <div id="node" class="node shape-0"></div>
 
-<script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
-    const canvas = document.getElementById('mainCanvas');
-    const ctx = canvas.getContext('2d');
-    const scoreEl = document.getElementById('score');
-    const logEl = document.getElementById('log');
-    const node = document.getElementById('node');
-    const ui = document.getElementById('ui');
+    <div class="node-container">
+        <div id="node" class="node shape-0"></div>
+    </div>
 
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        const scoreEl = document.getElementById('score');
+        const node = document.getElementById('node');
+        let score = 0;
 
-    let score = 0;
-    let particles = [];
-    const colors = ['#00ff41', '#33ff77', '#00ffaa', '#ccff00'];
-    const logs = ["BYPASSING...", "PACKET SENT", "IP_ROTATION: OK", "DPI_CRACK: 100%", "REALITY_GATE: ON"];
-
-    class Particle {
-        constructor(x, y, color) {
-            this.x = x; this.y = y; this.color = color;
-            this.size = Math.random() * 3 + 1;
-            this.speedX = (Math.random() - 0.5) * 8;
-            this.speedY = (Math.random() - 0.5) * 8;
-            this.alpha = 1;
+        // Звуковой движок
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playEffect() {
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.frequency.setValueAtTime(500 + Math.random()*300, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1);
+            g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.connect(g); g.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
         }
-        update() { this.x += this.speedX; this.y += this.speedY; this.alpha -= 0.02; }
-        draw() {
-            ctx.globalAlpha = this.alpha; ctx.fillStyle = this.color;
-            ctx.fillRect(this.x, this.y, this.size, this.size);
+
+        function updateNode() {
+            node.className = 'node shape-' + Math.floor(Math.random() * 3);
+            const color = score > 100 ? '#ff0044' : '#00ff41'; // Краснеет при нагрузке
+            node.style.boxShadow = `0 0 30px ${color}`;
+            node.style.borderColor = color;
         }
-    }
 
-    function animate() {
-        ctx.fillStyle = "rgba(2, 5, 2, 0.2)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        particles = particles.filter(p => p.alpha > 0);
-        particles.forEach(p => { p.update(); p.draw(); });
-        requestAnimationFrame(animate);
-    }
-    animate();
+        node.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            score++;
+            scoreEl.innerText = score;
+            playEffect();
+            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+            updateNode();
 
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playBeep() {
-        const osc = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        osc.frequency.setValueAtTime(600 + (score % 50), audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1);
-        g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-        osc.connect(g); g.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-    }
+            // Каждые 10 тапов отправляем данные боту (фоново)
+            if (score % 10 === 0) {
+                tg.CloudStorage.setItem('user_score', score.toString());
+            }
+        });
 
-    function updateNode() {
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        node.className = 'node shape-' + Math.floor(Math.random() * 4);
-        node.style.background = `radial-gradient(circle, ${color} 0%, transparent 80%)`;
-        node.style.border = `2px solid ${color}`;
-        node.style.boxShadow = `0 0 20px ${color}`;
-        node.style.left = Math.random() * (window.innerWidth - 100) + 'px';
-        node.style.top = Math.random() * (window.innerHeight - 300) + 180 + 'px';
-    }
-
-    node.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        score++; scoreEl.innerText = score;
-        logEl.innerText = logs[Math.floor(Math.random() * logs.length)];
-        
-        // Эффекты
-        playBeep();
-        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-        
-        // Тряска интерфейса
-        ui.style.transform = `translate(${(Math.random()-0.5)*10}px, ${(Math.random()-0.5)*10}px)`;
-        setTimeout(() => ui.style.transform = 'translate(0,0)', 50);
-
-        // Частицы
-        const rect = node.getBoundingClientRect();
-        for(let i=0; i<15; i++) particles.push(new Particle(rect.left+40, rect.top+40, node.style.borderColor));
-
-        updateNode();
-    });
-
-    updateNode();
-</script>
+        // Кнопка закрытия передает финальный результат
+        tg.MainButton.text = "СОХРАНИТЬ РЕЗУЛЬТАТ";
+        tg.MainButton.show();
+        tg.MainButton.onClick(() => {
+            tg.sendData(JSON.stringify({action: "update_score", points: score}));
+            tg.close();
+        });
+    </script>
 </body>
 </html>
