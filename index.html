@@ -3,86 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PRIVATE IT NODE // ELITE SLICER</title>
+    <title>PRIVATE IT NODE // RECORD PHONK</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { margin: 0; padding: 0; background: #000; color: #00ff41; font-family: 'Courier New', monospace; overflow: hidden; height: 100vh; touch-action: none; -webkit-user-select: none; }
         canvas { position: absolute; top: 0; left: 0; z-index: 5; }
         
-        #ui { position: relative; z-index: 10; text-align: center; padding: 10px; background: rgba(0,0,0,0.8); border-bottom: 2px solid #00ff41; pointer-events: none; }
+        #ui { position: relative; z-index: 10; text-align: center; padding: 10px; background: rgba(0,0,0,0.85); border-bottom: 2px solid #00ff41; pointer-events: none; }
         #score-container { display: flex; justify-content: space-around; align-items: center; }
-        #score-val { font-size: 32px; font-weight: 900; color: #fff; text-shadow: 0 0 10px #00ff41; }
+        #score-val { font-size: 36px; font-weight: 900; color: #fff; text-shadow: 0 0 15px #00ff41; }
         #lvl-val { font-size: 18px; color: #00ff41; border: 1px solid #00ff41; padding: 3px 8px; }
         
-        #track-info { font-size: 10px; color: #ffcc00; margin-top: 5px; text-transform: uppercase; }
+        #radio-info { font-size: 11px; color: #ffcc00; margin-top: 5px; letter-spacing: 1px; }
+        .live-dot { display: inline-block; width: 8px; height: 8px; background: #ff0000; border-radius: 50%; margin-right: 5px; animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
         
         #progress-bar-container { width: 100%; height: 4px; background: #052b05; margin-top: 8px; }
-        #progress-bar { width: 0%; height: 100%; background: #00ff41; transition: width 0.3s; }
+        #progress-bar { width: 0%; height: 100%; background: #00ff41; transition: width 0.3s; box-shadow: 0 0 10px #00ff41; }
         
         #start-prompt { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             z-index: 100; text-align: center; background: #00ff41; color: #000;
-            padding: 20px 40px; font-weight: bold; font-size: 20px; cursor: pointer;
-            box-shadow: 0 0 30px #00ff41; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
+            padding: 25px 50px; font-weight: bold; font-size: 22px; cursor: pointer;
+            box-shadow: 0 0 40px #00ff41; clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%);
         }
     </style>
 </head>
 <body>
-    <div id="start-prompt">ЗАПУСТИТЬ СИСТЕМУ</div>
+    <div id="start-prompt">CONNECT TO PHONK_LIVE</div>
     
     <div id="ui">
         <div id="score-container">
             <div>NODES: <span id="score-val">0</span></div>
             <div id="lvl-val">LVL 1</div>
         </div>
-        <div id="track-info">SYSTEM: IDLE</div>
+        <div id="radio-info"><span class="live-dot"></span>RECORD PHONK LIVE</div>
         <div id="progress-bar-container"><div id="progress-bar"></div></div>
     </div>
     
     <canvas id="gameCanvas"></canvas>
-    <audio id="bgMusic"></audio>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    const music = document.getElementById('bgMusic');
-    const trackInfo = document.getElementById('track-info');
     
+    // Прямой поток радио Record Phonk
+    const radio = new Audio("https://record.hosting.regru.ru/phonk96");
+    radio.crossOrigin = "anonymous";
+    radio.volume = 0.7;
+
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    // Плейлист из твоих файлов
-    const playlist = [
-        { name: "PHONK TRACK 1", file: "track1.mp3" },
-        { name: "PHONK TRACK 2", file: "track2.mp3" },
-        { name: "PHONK TRACK 3", file: "track3.mp3" }
-    ];
-
-    let score = 0;
-    let level = 1;
-    let exp = 0;
-    let objects = [];
-    let particles = [];
-    let texts = [];
-    let trail = [];
-    let gameActive = false;
-    let shake = 0;
-
-    function playNextTrack() {
-        const track = playlist[Math.floor(Math.random() * playlist.length)];
-        music.src = track.file;
-        music.play().catch(e => console.log("Audio error"));
-        trackInfo.innerText = "PLAYING: " + track.name;
-    }
-
-    music.onended = playNextTrack;
+    let score = 0; let level = 1; let exp = 0;
+    let objects = []; let particles = []; let texts = []; let trail = [];
+    let gameActive = false; let shake = 0;
 
     document.getElementById('start-prompt').addEventListener('click', function() {
         gameActive = true;
         this.style.display = 'none';
-        playNextTrack();
+        radio.play().catch(() => alert("Ошибка потока. Попробуй перезагрузить."));
     });
 
     class FloatingText {
@@ -93,15 +75,15 @@
         update() { this.y -= 1.5; this.life -= 0.02; }
         draw() {
             ctx.save(); ctx.globalAlpha = this.life; ctx.fillStyle = this.color;
-            ctx.font = "bold 22px monospace"; ctx.fillText(this.text, this.x, this.y); ctx.restore();
+            ctx.font = "bold 20px monospace"; ctx.fillText(this.text, this.x, this.y); ctx.restore();
         }
     }
 
     class Particle {
         constructor(x, y, color) {
             this.x = x; this.y = y;
-            this.speedX = (Math.random() - 0.5) * 10;
-            this.speedY = (Math.random() - 0.5) * 10;
+            this.speedX = (Math.random() - 0.5) * 12;
+            this.speedY = (Math.random() - 0.5) * 12;
             this.life = 1.0; this.color = color;
         }
         update() { this.x += this.speedX; this.y += this.speedY; this.life -= 0.04; }
@@ -113,8 +95,8 @@
             this.x = 50 + Math.random() * (canvas.width - 100);
             this.y = canvas.height + 50;
             this.size = 45;
-            this.speedX = (Math.random() - 0.5) * (5 + level);
-            this.speedY = -(14 + level);
+            this.speedX = (Math.random() - 0.5) * (6 + level);
+            this.speedY = -(15 + level);
             this.gravity = 0.35;
         }
         update() { this.x += this.speedX; this.speedY += this.gravity; this.y += this.speedY; }
@@ -134,30 +116,25 @@
             let dx = ex - (obj.x + 22);
             let dy = ey - (obj.y + 22);
             if (Math.abs(dx) < 45 && Math.abs(dy) < 45) {
-                hits++;
-                score++;
-                exp += 5;
-                shake = 5;
-                for(let p=0; p<10; p++) particles.push(new Particle(obj.x+22, obj.y+22, "#00ff41"));
-                texts.push(new FloatingText(obj.x, obj.y, "+1"));
+                hits++; score++; exp += 5; shake = 6;
+                for(let p=0; p<12; p++) particles.push(new Particle(obj.x+22, obj.y+22, "#00ff41"));
+                texts.push(new FloatingText(obj.x, obj.y, "SLICE"));
                 objects.splice(i, 1);
                 updateUI();
-                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
             }
         });
 
         if (hits > 1) {
-            texts.push(new FloatingText(ex, ey - 30, "COMBO X" + hits, "#ffcc00"));
-            score += hits;
-            exp += 10;
-            updateUI();
+            texts.push(new FloatingText(ex, ey - 40, "COMBO X" + hits, "#ffcc00"));
+            score += hits; exp += 10; updateUI();
         }
     }
 
     function updateUI() {
         if (exp >= 100) {
             level++; exp = 0;
-            texts.push(new FloatingText(canvas.width/2 - 40, canvas.height/2, "LEVEL UP", "#00ff41"));
+            texts.push(new FloatingText(canvas.width/2 - 50, canvas.height/2, "LEVEL UP", "#00ff41"));
             if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
         }
         document.getElementById('score-val').innerText = score;
@@ -176,13 +153,13 @@
 
         if (gameActive) {
             if (trail.length > 1) {
-                ctx.beginPath(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 5;
                 ctx.moveTo(trail[0].x, trail[0].y);
-                for(let i=1; i<trail.length; i++) { ctx.lineTo(trail[i].x, trail[i].y); trail[i].life -= 0.1; }
+                for(let i=1; i<trail.length; i++) { ctx.lineTo(trail[i].x, trail[i].y); trail[i].life -= 0.12; }
                 ctx.stroke(); trail = trail.filter(t => t.life > 0);
             }
 
-            if (Math.random() < (0.04 + level * 0.01)) objects.push(new DataNode());
+            if (Math.random() < (0.05 + level * 0.01)) objects.push(new DataNode());
 
             objects.forEach((obj, i) => { obj.update(); obj.draw(); if (obj.y > canvas.height + 100) objects.splice(i, 1); });
             particles.forEach((p, i) => { p.update(); p.draw(); if (p.life <= 0) particles.splice(i, 1); });
