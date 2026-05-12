@@ -3,20 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PRIVATE IT NODE // WEB RADIO</title>
+    <title>PRIVATE IT NODE // ELITE SLICER</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; padding: 0; background: #000; color: #00ff41; font-family: 'Courier New', monospace; overflow: hidden; height: 100vh; touch-action: none; }
+        body { margin: 0; padding: 0; background: #000; color: #00ff41; font-family: 'Courier New', monospace; overflow: hidden; height: 100vh; touch-action: none; -webkit-user-select: none; }
         canvas { position: absolute; top: 0; left: 0; z-index: 5; }
         
-        #ui { position: relative; z-index: 10; text-align: center; padding: 10px; background: rgba(0,0,0,0.9); border-bottom: 2px solid #00ff41; }
-        #score-val { font-size: 42px; font-weight: 900; color: #fff; text-shadow: 0 0 15px #00ff41; }
+        #ui { position: relative; z-index: 10; text-align: center; padding: 10px; background: rgba(0,0,0,0.8); border-bottom: 2px solid #00ff41; pointer-events: none; }
+        #score-container { display: flex; justify-content: space-around; align-items: center; }
+        #score-val { font-size: 32px; font-weight: 900; color: #fff; text-shadow: 0 0 10px #00ff41; }
+        #lvl-val { font-size: 18px; color: #00ff41; border: 1px solid #00ff41; padding: 3px 8px; }
         
-        #radio-status { font-size: 10px; color: #ffcc00; margin-top: 5px; text-transform: uppercase; letter-spacing: 2px; }
-        .live-indicator { display: inline-block; width: 8px; height: 8px; background: red; border-radius: 50%; margin-right: 5px; animation: blink 1s infinite; }
+        #track-info { font-size: 10px; color: #ffcc00; margin-top: 5px; text-transform: uppercase; }
         
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-
+        #progress-bar-container { width: 100%; height: 4px; background: #052b05; margin-top: 8px; }
+        #progress-bar { width: 0%; height: 100%; background: #00ff41; transition: width 0.3s; }
+        
         #start-prompt { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             z-index: 100; text-align: center; background: #00ff41; color: #000;
@@ -26,111 +28,165 @@
     </style>
 </head>
 <body>
-    <div id="start-prompt">ПОДКЛЮЧИТЬСЯ К ЭФИРУ</div>
+    <div id="start-prompt">ЗАПУСТИТЬ СИСТЕМУ</div>
     
     <div id="ui">
-        <div>NODES_CLEARED: <span id="score-val">0</span></div>
-        <div id="radio-status"><span class="live-indicator"></span>LIVE_PHONK_STATION</div>
+        <div id="score-container">
+            <div>NODES: <span id="score-val">0</span></div>
+            <div id="lvl-val">LVL 1</div>
+        </div>
+        <div id="track-info">SYSTEM: IDLE</div>
+        <div id="progress-bar-container"><div id="progress-bar"></div></div>
     </div>
     
     <canvas id="gameCanvas"></canvas>
+    <audio id="bgMusic"></audio>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
+    const music = document.getElementById('bgMusic');
+    const trackInfo = document.getElementById('track-info');
     
-    // Прямая ссылка на поток Phonk радио
-    const radioStream = new Audio("https://shoutcast.com.ru:8000/phonk");
-    radioStream.crossOrigin = "anonymous";
-
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
+    // Плейлист из твоих файлов
+    const playlist = [
+        { name: "PHONK TRACK 1", file: "track1.mp3" },
+        { name: "PHONK TRACK 2", file: "track2.mp3" },
+        { name: "PHONK TRACK 3", file: "track3.mp3" }
+    ];
+
     let score = 0;
+    let level = 1;
+    let exp = 0;
     let objects = [];
+    let particles = [];
     let texts = [];
+    let trail = [];
     let gameActive = false;
+    let shake = 0;
+
+    function playNextTrack() {
+        const track = playlist[Math.floor(Math.random() * playlist.length)];
+        music.src = track.file;
+        music.play().catch(e => console.log("Audio error"));
+        trackInfo.innerText = "PLAYING: " + track.name;
+    }
+
+    music.onended = playNextTrack;
 
     document.getElementById('start-prompt').addEventListener('click', function() {
         gameActive = true;
         this.style.display = 'none';
-        
-        // Запуск потока
-        radioStream.play().catch(error => {
-            console.log("Ошибка стрима:", error);
-            alert("Ошибка подключения к радио. Попробуй еще раз.");
-        });
+        playNextTrack();
     });
 
     class FloatingText {
-        constructor(x, y, text) {
-            this.x = x; this.y = y; this.text = text; this.life = 1.0;
+        constructor(x, y, text, color = "#fff") {
+            this.x = x; this.y = y; this.text = text; this.color = color;
+            this.life = 1.0;
         }
+        update() { this.y -= 1.5; this.life -= 0.02; }
         draw() {
-            ctx.save();
-            ctx.globalAlpha = this.life;
-            ctx.fillStyle = "#fff";
-            ctx.font = "bold 20px Courier New";
-            ctx.fillText(this.text, this.x, this.y);
-            this.y -= 1.5; this.life -= 0.02;
-            ctx.restore();
+            ctx.save(); ctx.globalAlpha = this.life; ctx.fillStyle = this.color;
+            ctx.font = "bold 22px monospace"; ctx.fillText(this.text, this.x, this.y); ctx.restore();
+        }
+    }
+
+    class Particle {
+        constructor(x, y, color) {
+            this.x = x; this.y = y;
+            this.speedX = (Math.random() - 0.5) * 10;
+            this.speedY = (Math.random() - 0.5) * 10;
+            this.life = 1.0; this.color = color;
+        }
+        update() { this.x += this.speedX; this.y += this.speedY; this.life -= 0.04; }
+        draw() { ctx.fillStyle = this.color; ctx.globalAlpha = this.life; ctx.fillRect(this.x, this.y, 3, 3); }
+    }
+
+    class DataNode {
+        constructor() {
+            this.x = 50 + Math.random() * (canvas.width - 100);
+            this.y = canvas.height + 50;
+            this.size = 45;
+            this.speedX = (Math.random() - 0.5) * (5 + level);
+            this.speedY = -(14 + level);
+            this.gravity = 0.35;
+        }
+        update() { this.x += this.speedX; this.speedY += this.gravity; this.y += this.speedY; }
+        draw() {
+            ctx.strokeStyle = "#00ff41"; ctx.lineWidth = 3; ctx.shadowBlur = 10; ctx.shadowColor = "#00ff41";
+            ctx.strokeRect(this.x, this.y, this.size, this.size);
+            ctx.shadowBlur = 0;
         }
     }
 
     function handleInput(ex, ey) {
         if (!gameActive) return;
+        trail.push({x: ex, y: ey, life: 1.0});
+        
+        let hits = 0;
         objects.forEach((obj, i) => {
-            let dx = ex - (obj.x + 25);
-            let dy = ey - (obj.y + 25);
+            let dx = ex - (obj.x + 22);
+            let dy = ey - (obj.y + 22);
             if (Math.abs(dx) < 45 && Math.abs(dy) < 45) {
+                hits++;
                 score++;
-                texts.push(new FloatingText(obj.x, obj.y, "NODE_DELETED"));
+                exp += 5;
+                shake = 5;
+                for(let p=0; p<10; p++) particles.push(new Particle(obj.x+22, obj.y+22, "#00ff41"));
+                texts.push(new FloatingText(obj.x, obj.y, "+1"));
                 objects.splice(i, 1);
-                document.getElementById('score-val').innerText = score;
-                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+                updateUI();
+                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
             }
         });
+
+        if (hits > 1) {
+            texts.push(new FloatingText(ex, ey - 30, "COMBO X" + hits, "#ffcc00"));
+            score += hits;
+            exp += 10;
+            updateUI();
+        }
     }
 
-    window.addEventListener('touchmove', (e) => {
-        handleInput(e.touches[0].clientX, e.touches[0].clientY);
-    });
+    function updateUI() {
+        if (exp >= 100) {
+            level++; exp = 0;
+            texts.push(new FloatingText(canvas.width/2 - 40, canvas.height/2, "LEVEL UP", "#00ff41"));
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        }
+        document.getElementById('score-val').innerText = score;
+        document.getElementById('lvl-val').innerText = "LVL " + level;
+        document.getElementById('progress-bar').style.width = exp + "%";
+    }
+
+    window.addEventListener('touchmove', (e) => handleInput(e.touches[0].clientX, e.touches[0].clientY));
 
     function gameLoop() {
-        ctx.fillStyle = "rgba(0,0,0,0.3)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillRect(0,0,canvas.width, canvas.height);
         
+        if (shake > 0) { ctx.translate(Math.random()*shake, Math.random()*shake); shake *= 0.9; }
+
         if (gameActive) {
-            // Спавн узлов
-            if (Math.random() < 0.06) {
-                objects.push({
-                    x: Math.random() * (canvas.width - 50),
-                    y: canvas.height + 50,
-                    sy: -14 - Math.random() * 5,
-                    sx: (Math.random() - 0.5) * 6
-                });
+            if (trail.length > 1) {
+                ctx.beginPath(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 4;
+                ctx.moveTo(trail[0].x, trail[0].y);
+                for(let i=1; i<trail.length; i++) { ctx.lineTo(trail[i].x, trail[i].y); trail[i].life -= 0.1; }
+                ctx.stroke(); trail = trail.filter(t => t.life > 0);
             }
-            
-            objects.forEach((obj, i) => {
-                obj.y += obj.sy; 
-                obj.x += obj.sx; 
-                obj.sy += 0.35; // Гравитация
-                
-                ctx.strokeStyle = "#00ff41";
-                ctx.lineWidth = 3;
-                ctx.shadowBlur = 10;
-                ctx.shadowColor = "#00ff41";
-                ctx.strokeRect(obj.x, obj.y, 50, 50);
-                
-                if (obj.y > canvas.height + 100) objects.splice(i, 1);
-            });
-            
-            texts.forEach((t, i) => {
-                t.draw();
-                if (t.life <= 0) texts.splice(i, 1);
-            });
+
+            if (Math.random() < (0.04 + level * 0.01)) objects.push(new DataNode());
+
+            objects.forEach((obj, i) => { obj.update(); obj.draw(); if (obj.y > canvas.height + 100) objects.splice(i, 1); });
+            particles.forEach((p, i) => { p.update(); p.draw(); if (p.life <= 0) particles.splice(i, 1); });
+            texts.forEach((t, i) => { t.update(); t.draw(); if (t.life <= 0) texts.splice(i, 1); });
         }
         requestAnimationFrame(gameLoop);
     }
