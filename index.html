@@ -2,14 +2,15 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PRIVATE IT NODE // ELITE SLICER v2.5</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>PRIVATE IT NODE // ELITE SLICER v3.0</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --neon-green: #33ff33;
-            --neon-red: #ff3333;
+            --neon-green: #00ff41;
+            --neon-red: #ff003c;
             --neon-gold: #ffcc00;
+            --bg-dark: #0a0a0a;
         }
 
         body { 
@@ -18,95 +19,107 @@
             height: 100vh; touch-action: none; user-select: none;
         }
         
-        /* CRT Эффект */
-        body::before {
-            content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-            z-index: 100; background-size: 100% 4px, 3px 100%; pointer-events: none;
+        /* Фон с картинкой и затемнением */
+        #bg-container {
+            position: fixed; inset: 0;
+            background: url('IMG_2080.png') no-repeat center center;
+            background-size: cover;
+            z-index: 0;
+        }
+        #bg-overlay {
+            position: absolute; inset: 0;
+            background: radial-gradient(circle, rgba(0,20,0,0.4) 0%, rgba(0,0,0,0.9) 100%);
+            z-index: 1;
         }
 
-        #bg-image {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, #051a05 0%, #000 100%);
-            z-index: 1; opacity: 0.5;
-        }
+        /* Слой для матричного дождя */
+        #matrix-canvas { position: absolute; inset: 0; z-index: 2; opacity: 0.15; }
 
-        canvas { position: absolute; top: 0; left: 0; z-index: 5; }
+        canvas#gameCanvas { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
 
-        @keyframes glitch {
-            0% { transform: translate(0); }
-            20% { transform: translate(-3px, 2px); filter: hue-rotate(90deg); }
-            40% { transform: translate(3px, -2px); }
-            100% { transform: translate(0); }
+        /* Эффект старого монитора */
+        .crt-overlay {
+            position: fixed; inset: 0; z-index: 100; pointer-events: none;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 3px, 2px 100%;
         }
-        .glitch-active { animation: glitch 0.15s infinite; }
 
         #ui-header {
-            position: relative; z-index: 10; padding: 15px 20px;
-            background: linear-gradient(180deg, rgba(0,20,0,0.9) 0%, rgba(0,0,0,0) 100%);
-            border-bottom: 1px solid rgba(51, 255, 51, 0.2);
+            position: relative; z-index: 50; padding: 20px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, transparent 100%);
         }
-        
-        .header-top { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; }
-        .stats-main { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 5px; }
-        
+
         #score-val { 
-            font-size: 48px; font-weight: 900; color: #fff; line-height: 0.9; 
-            text-shadow: 0 0 15px var(--neon-green); font-family: 'Arial Black', sans-serif;
+            font-size: 64px; font-weight: 900; color: #fff; line-height: 0.8;
+            text-shadow: 0 0 20px var(--neon-green); font-family: 'Arial Black', sans-serif;
         }
-        
-        #combo-ui { color: var(--neon-gold); min-height: 20px; text-transform: uppercase; }
 
-        .progress-box { text-align: right; }
-        .bar-container { width: 120px; height: 8px; background: #031a03; border: 1px solid var(--neon-green); margin-top: 4px; }
-        #bar-fill { width: 0%; height: 100%; background: var(--neon-green); transition: width 0.3s; shadow: 0 0 10px var(--neon-green); }
-
-        .monitor {
-            width: 45%; background: rgba(0, 15, 0, 0.7); backdrop-filter: blur(5px);
-            border: 1px solid rgba(51, 255, 51, 0.2); padding: 8px; font-size: 9px;
-            height: 60px; overflow: hidden; color: var(--neon-green); box-sizing: border-box;
-        }
+        .bar-container { width: 140px; height: 12px; background: rgba(0,50,0,0.5); border: 1px solid var(--neon-green); margin-top: 5px; position: relative; }
+        #bar-fill { width: 0%; height: 100%; background: var(--neon-green); box-shadow: 0 0 15px var(--neon-green); transition: width 0.2s; }
 
         #start-screen {
-            position: absolute; inset: 0; z-index: 200; background: #000;
+            position: fixed; inset: 0; z-index: 1000; background: var(--bg-dark);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
 
-        #start-btn {
-            background: var(--neon-green); color: #000; border: none;
-            padding: 15px 40px; font-family: 'Courier New', monospace; font-weight: bold;
-            cursor: pointer; box-shadow: 0 0 30px var(--neon-green); font-size: 18px;
+        .glitch-btn {
+            background: var(--neon-green); color: #000; border: none; padding: 20px 60px;
+            font-size: 20px; font-family: 'Courier New', monospace; font-weight: bold;
+            box-shadow: 0 0 40px var(--neon-green); cursor: pointer; transition: 0.2s;
         }
+        .glitch-btn:active { transform: scale(0.95); filter: hue-rotate(90deg); }
+
+        .monitor {
+            width: 44%; background: rgba(0, 30, 0, 0.6); border-left: 3px solid var(--neon-green);
+            padding: 10px; font-size: 10px; height: 65px; overflow: hidden; backdrop-filter: blur(5px);
+        }
+
+        @keyframes shake {
+            0% { transform: translate(0,0); }
+            25% { transform: translate(5px,5px); }
+            50% { transform: translate(-5px,0); }
+            75% { transform: translate(0,-5px); }
+            100% { transform: translate(0,0); }
+        }
+        .shake-active { animation: shake 0.15s cubic-bezier(.36,.07,.19,.97) both; }
     </style>
 </head>
 <body>
-    <div id="bg-image"></div>
-    
+
+    <div id="bg-container">
+        <div id="bg-overlay"></div>
+        <canvas id="matrix-canvas"></canvas>
+    </div>
+
+    <div class="crt-overlay"></div>
+
     <div id="start-screen">
-        <h1 style="text-shadow: 0 0 10px var(--neon-green);">ELITE_SLICER v2.5</h1>
-        <button id="start-btn">INITIALIZE_SESSION</button>
+        <h1 style="letter-spacing: 5px; margin-bottom: 30px;">ELITE_SLICER v3.0</h1>
+        <button id="start-btn" class="glitch-btn">RUN EXECUTABLE</button>
+        <p style="margin-top: 20px; opacity: 0.5; font-size: 12px;">UNAUTHORIZED ACCESS DETECTED</p>
     </div>
 
     <div id="ui-header">
-        <div class="header-top">
-            <span>SYS.ADMIN@NODE_01</span>
-            <span id="combo-ui"></span>
+        <div style="display: flex; justify-content: space-between; font-size: 11px;">
+            <span>NODE_ID: 0x77-SLICER</span>
+            <span id="combo-ui" style="color: var(--neon-gold); font-weight: bold;"></span>
         </div>
-        <div class="stats-main">
+        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
             <div>
-                <div style="font-size: 9px; opacity: 0.7;">DATA_EXTRACTED</div>
+                <div style="font-size: 10px; opacity: 0.6;">DATA_HARVESTED</div>
                 <div id="score-val">0</div>
             </div>
-            <div class="progress-box">
-                <div style="font-size: 10px;">LEVEL: <span id="lvl-num">1</span></div>
+            <div style="text-align: right;">
+                <div style="font-size: 11px;">SEC_LEVEL: <span id="lvl-num">1</span></div>
                 <div class="bar-container"><div id="bar-fill"></div></div>
             </div>
         </div>
     </div>
 
-    <div id="ui-footer" style="position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: space-around; z-index: 10;">
-        <div class="monitor">[SYSTEM_LOG]<br><div id="log-1">IDLE...</div></div>
-        <div class="monitor">[NETWORK_TRAFFIC]<br><div id="log-2">ENCRYPTED</div></div>
+    <div id="ui-footer" style="position: absolute; bottom: 40px; width: 100%; display: flex; justify-content: space-around; z-index: 50;">
+        <div class="monitor">[LOG_STREAM]<br><div id="log-1">...</div></div>
+        <div class="monitor">[REMOTE_IP]<br><div id="log-2">...</div></div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -114,86 +127,79 @@
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
-    tg.enableClosingConfirmation();
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    const mCanvas = document.getElementById('matrix-canvas');
+    const mCtx = mCanvas.getContext('2d');
 
     let score = 0, level = 1, exp = 0, gameActive = false;
     let objects = [], trail = [], particles = [], floatingTexts = [];
     let combo = 0, lastHit = 0;
 
-    // Инициализация звука (опционально)
-    const playHaptic = (type) => {
-        if (tg.HapticFeedback) {
-            if (type === 'error') tg.HapticFeedback.notificationOccurred('error');
-            else tg.HapticFeedback.impactOccurred('medium');
-        }
-    };
+    // Настройка аудио
+    const bgMusic = new Audio('music.mp3');
+    bgMusic.loop = true;
 
-    document.getElementById('start-btn').onclick = () => {
-        gameActive = true;
-        document.getElementById('start-screen').style.display = 'none';
-        startLogs();
-    };
+    // Матричный фон
+    mCanvas.width = window.innerWidth;
+    mCanvas.height = window.innerHeight;
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$#@%&*";
+    const drops = Array(Math.floor(mCanvas.width/20)).fill(1);
 
+    function drawMatrix() {
+        mCtx.fillStyle = "rgba(0, 0, 0, 0.05)";
+        mCtx.fillRect(0, 0, mCanvas.width, mCanvas.height);
+        mCtx.fillStyle = "#0F0";
+        mCtx.font = "15px monospace";
+        drops.forEach((y, i) => {
+            const text = chars[Math.floor(Math.random()*chars.length)];
+            mCtx.fillText(text, i*20, y*20);
+            if(y*20 > mCanvas.height && Math.random() > 0.975) drops[i] = 0;
+            drops[i]++;
+        });
+    }
+
+    // Классы игры
     class Particle {
         constructor(x, y, color) {
             this.x = x; this.y = y;
-            this.sx = (Math.random() - 0.5) * 10;
-            this.sy = (Math.random() - 0.5) * 10;
+            this.sx = (Math.random() - 0.5) * 15;
+            this.sy = (Math.random() - 0.5) * 15;
             this.life = 1.0;
             this.color = color;
         }
-        update() { this.x += this.sx; this.y += this.sy; this.life -= 0.03; }
+        update() { this.x += this.sx; this.y += this.sy; this.life -= 0.04; }
         draw() {
             ctx.fillStyle = this.color.replace('rgb', 'rgba').replace(')', `, ${this.life})`);
-            ctx.fillRect(this.x, this.y, 2, 2);
-        }
-    }
-
-    class FloatingText {
-        constructor(x, y, text, color) {
-            this.x = x; this.y = y; this.text = text; this.color = color;
-            this.life = 1.0;
-        }
-        update() { this.y -= 1; this.life -= 0.02; }
-        draw() {
-            ctx.fillStyle = this.color.replace('rgb', 'rgba').replace(')', `, ${this.life})`);
-            ctx.font = "bold 16px Courier New";
-            ctx.fillText(this.text, this.x, this.y);
+            ctx.fillRect(this.x, this.y, 3, 3);
         }
     }
 
     class DataNode {
         constructor() {
-            this.size = 45;
-            this.x = 40 + Math.random() * (canvas.width - 80);
-            this.y = canvas.height + 50;
-            this.sy = -(12 + Math.random() * 5 + (level * 0.5));
-            this.sx = (Math.random() - 0.5) * 3;
+            this.size = 50;
+            this.x = Math.random() * (window.innerWidth - 100) + 50;
+            this.y = window.innerHeight + 50;
+            this.sy = -(14 + Math.random() * 5 + level);
+            this.sx = (Math.random() - 0.5) * 4;
             this.rot = 0;
-            this.rotV = (Math.random() - 0.5) * 0.15;
+            this.rotV = (Math.random() - 0.5) * 0.2;
             
-            let r = Math.random();
-            if (r < 0.15) { this.type = 'err'; this.color = 'rgb(255, 51, 51)'; }
-            else if (r > 0.92) { this.type = 'gold'; this.color = 'rgb(255, 204, 0)'; }
-            else { this.type = 'data'; this.color = 'rgb(51, 255, 51)'; }
+            const r = Math.random();
+            if (r < 0.15) { this.type = 'err'; this.color = 'rgb(255, 0, 60)'; }
+            else if (r > 0.9) { this.type = 'gold'; this.color = 'rgb(255, 204, 0)'; }
+            else { this.type = 'data'; this.color = 'rgb(0, 255, 65)'; }
         }
-        update() { this.x += this.sx; this.sy += 0.35; this.y += this.sy; this.rot += this.rotV; }
+        update() { this.x += this.sx; this.sy += 0.4; this.y += this.sy; this.rot += this.rotV; }
         draw() {
             ctx.save();
             ctx.translate(this.x, this.y);
             ctx.rotate(this.rot);
             ctx.strokeStyle = this.color;
-            ctx.lineWidth = 2;
-            ctx.shadowBlur = 10; ctx.shadowColor = this.color;
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 15; ctx.shadowColor = this.color;
             ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
-            ctx.fillStyle = this.color;
-            ctx.font = "10px monospace";
-            ctx.fillText(this.type.toUpperCase(), -15, 4);
             ctx.restore();
         }
     }
@@ -203,27 +209,27 @@
         trail.push({x, y, life: 1.0});
 
         objects.forEach((obj, i) => {
-            if(Math.hypot(x - obj.x, y - obj.y) < 45) {
-                for(let p=0; p<12; p++) particles.push(new Particle(obj.x, obj.y, obj.color));
+            const dist = Math.hypot(x - obj.x, y - obj.y);
+            if(dist < 50) {
+                for(let p=0; p<15; p++) particles.push(new Particle(obj.x, obj.y, obj.color));
                 
                 if (obj.type === 'err') {
-                    score = Math.max(0, score - 500);
+                    score = Math.max(0, score - 1000);
                     combo = 0;
-                    playHaptic('error');
-                    document.body.classList.add('glitch-active');
-                    setTimeout(() => document.body.classList.remove('glitch-active'), 200);
+                    document.body.classList.add('shake-active');
+                    setTimeout(() => document.body.classList.remove('shake-active'), 200);
+                    if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
                 } else {
                     const now = Date.now();
-                    combo = (now - lastHit < 600) ? combo + 1 : 1;
+                    combo = (now - lastHit < 500) ? combo + 1 : 1;
                     lastHit = now;
                     
-                    let basePoints = obj.type === 'gold' ? 500 : 100;
-                    let addedScore = basePoints * combo;
-                    score += addedScore;
-                    exp += (obj.type === 'gold' ? 15 : 5);
+                    let pts = obj.type === 'gold' ? 500 : 150;
+                    score += pts * combo;
+                    exp += (obj.type === 'gold' ? 20 : 8);
                     
-                    floatingTexts.push(new FloatingText(obj.x, obj.y, `+${addedScore}`, obj.color));
-                    playHaptic('success');
+                    floatingTexts.push({x: obj.x, y: obj.y, text: `+${pts*combo}`, color: obj.color, life: 1});
+                    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
                 }
                 objects.splice(i, 1);
                 updateUI();
@@ -233,57 +239,57 @@
 
     function updateUI() {
         document.getElementById('score-val').innerText = score.toLocaleString();
-        document.getElementById('combo-ui').innerText = combo > 1 ? `COMBO X${combo}` : "";
+        document.getElementById('combo-ui').innerText = combo > 1 ? `X${combo} COMBO` : "";
         document.getElementById('bar-fill').style.width = Math.min(exp, 100) + "%";
-        if(exp >= 100) { 
-            level++; exp = 0; 
+        if(exp >= 100) {
+            level++; exp = 0;
             document.getElementById('lvl-num').innerText = level;
-            floatingTexts.push(new FloatingText(canvas.width/2, canvas.height/2, "LEVEL UP!", "#fff"));
+            floatingTexts.push({x: window.innerWidth/2 - 50, y: window.innerHeight/2, text: "SEC_BREACHED", color: "#fff", life: 2});
         }
     }
 
-    function startLogs() {
-        const msg = ["BYPASSING...", "UPLINK: OK", "INJECTING...", "NODE_FOUND", "ROOT_ACCESS"];
+    document.getElementById('start-btn').onclick = () => {
+        gameActive = true;
+        document.getElementById('start-screen').style.display = 'none';
+        bgMusic.play().catch(e => console.log("Audio waiting for interaction"));
+        
+        // Логи
         setInterval(() => {
-            if(!gameActive) return;
-            const l1 = document.getElementById('log-1');
-            const l2 = document.getElementById('log-2');
-            l1.innerText = msg[Math.floor(Math.random()*msg.length)];
-            l2.innerText = (Math.random().toString(16)).substring(2, 10).toUpperCase();
-        }, 1500);
-    }
+            document.getElementById('log-1').innerHTML = ["TUNNELING...", "ROOT_FOUND", "ENCRYPTING", "BYPASSING"][Math.floor(Math.random()*4)] + "<br>" + document.getElementById('log-1').innerHTML;
+            document.getElementById('log-2').innerText = `192.168.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
+        }, 2000);
+    };
 
-    // Touch events
+    window.addEventListener('touchstart', (e) => handleInput(e.touches[0].clientX, e.touches[0].clientY));
     window.addEventListener('touchmove', (e) => {
         e.preventDefault();
         handleInput(e.touches[0].clientX, e.touches[0].clientY);
     }, {passive: false});
 
     function gameLoop() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
         
+        drawMatrix();
+
         if(gameActive) {
             // Trail
             if(trail.length > 1) {
                 ctx.beginPath();
-                ctx.strokeStyle = "#33ff33"; ctx.lineWidth = 3;
+                ctx.strokeStyle = "#fff"; ctx.lineWidth = 4;
                 ctx.moveTo(trail[0].x, trail[0].y);
                 for(let i=1; i<trail.length; i++) ctx.lineTo(trail[i].x, trail[i].y);
                 ctx.stroke();
-                trail.forEach(t => t.life -= 0.1);
+                trail.forEach(t => t.life -= 0.15);
                 trail = trail.filter(t => t.life > 0);
             }
 
             // Spawn
-            if(Math.random() < 0.03 + (level * 0.005)) objects.push(new DataNode());
+            if(Math.random() < 0.04 + (level * 0.005)) objects.push(new DataNode());
 
-            objects.forEach((obj, i) => { 
-                obj.update(); obj.draw(); 
-                if(obj.y > canvas.height + 100) { 
-                    objects.splice(i, 1); 
-                    if(obj.type !== 'err') combo = 0; // Сброс комбо при пропуске цели
-                    updateUI();
-                }
+            objects.forEach((obj, i) => {
+                obj.update(); obj.draw();
+                if(obj.y > window.innerHeight + 100) { objects.splice(i, 1); combo = 0; updateUI(); }
             });
 
             particles.forEach((p, i) => {
@@ -292,12 +298,16 @@
             });
 
             floatingTexts.forEach((ft, i) => {
-                ft.update(); ft.draw();
+                ctx.fillStyle = ft.color;
+                ctx.font = "bold 20px monospace";
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ft.y -= 2; ft.life -= 0.03;
                 if(ft.life <= 0) floatingTexts.splice(i, 1);
             });
         }
         requestAnimationFrame(gameLoop);
     }
+
     gameLoop();
 </script>
 </body>
