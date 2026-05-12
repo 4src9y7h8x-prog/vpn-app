@@ -7,26 +7,32 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { margin: 0; padding: 0; background: #050a05; color: #00ff41; font-family: monospace; overflow: hidden; height: 100vh; }
-        canvas { position: absolute; top: 0; left: 0; z-index: 1; opacity: 0.3; }
+        canvas { position: absolute; top: 0; left: 0; z-index: 1; opacity: 0.2; }
         #ui { position: relative; z-index: 10; text-align: center; padding: 15px; border-bottom: 1px solid #00ff41; background: rgba(0,0,0,0.8); }
+        
         .node { 
-            position: absolute; width: 90px; height: 90px; 
-            background: radial-gradient(circle, #00ff41 10%, #002200 80%); 
-            border-radius: 50%; box-shadow: 0 0 25px #00ff41; 
-            z-index: 20; touch-action: none;
+            position: absolute; width: 80px; height: 80px; 
+            display: flex; align-items: center; justify-content: center;
+            z-index: 20; touch-action: none; transition: transform 0.05s, background 0.2s;
         }
-        .msg { font-size: 10px; color: #fff; opacity: 0.7; margin-top: 5px; }
+        
+        /* Фигуры */
+        .shape-0 { border-radius: 50%; } /* Круг */
+        .shape-1 { border-radius: 10%; } /* Квадрат */
+        .shape-2 { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); } /* Ромб */
+        .shape-3 { clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); } /* Гексагон */
+
+        #log { font-size: 10px; color: #fff; opacity: 0.7; margin-top: 5px; height: 15px; }
     </style>
 </head>
 <body>
     <canvas id="matrix"></canvas>
     <div id="ui">
-        <div style="text-shadow: 0 0 10px #00ff41;">PRIVATE IT NODE // SYSTEM</div>
-        <div id="status">STATUS: STANDBY</div>
-        <div style="font-size: 20px;">[ <span id="score">0</span> ]</div>
-        <div class="msg" id="log">WAITING FOR CONNECTION...</div>
+        <div style="text-shadow: 0 0 10px #00ff41;">PRIVATE IT NODE // CORE</div>
+        <div style="font-size: 22px; margin: 5px 0;">[ <span id="score">0</span> ]</div>
+        <div id="log">SYSTEM READY</div>
     </div>
-    <div id="node" class="node"></div>
+    <div id="node" class="node shape-0"></div>
 
 <script>
     const tg = window.Telegram.WebApp;
@@ -36,56 +42,70 @@
     const scoreEl = document.getElementById('score');
     const logEl = document.getElementById('log');
     const node = document.getElementById('node');
+    
     let score = 0;
+    const colors = ['#00ff41', '#00cc33', '#33ff77', '#00802b', '#99ffaa'];
+    const logs = ["NODE SHIFTED", "IP ROTATED", "CORE REGENERATED", "DPI BYPASSED", "PACKET ENCRYPTED"];
 
-    // --- MATRIX BACKGROUND ---
+    // --- MATRIX BG ---
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    const letters = "01ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const fontSize = 10;
-    const columns = canvas.width / fontSize;
+    const columns = canvas.width / 10;
     const drops = Array(Math.floor(columns)).fill(1);
-
     function drawMatrix() {
         ctx.fillStyle = "rgba(5, 10, 5, 0.1)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#00ff41";
-        ctx.font = fontSize + "px monospace";
         for (let i = 0; i < drops.length; i++) {
-            const text = letters[Math.floor(Math.random() * letters.length)];
-            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+            ctx.fillText(Math.floor(Math.random()*2), i*10, drops[i]*10);
+            if (drops[i]*10 > canvas.height && Math.random() > 0.975) drops[i] = 0;
             drops[i]++;
         }
     }
     setInterval(drawMatrix, 50);
 
-    // --- AUDIO & HAPTIC ---
+    // --- AUDIO ---
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const logs = ["BYPASSING DPI...", "ENCRYPTING...", "NODE ACTIVE", "ROTATING IP...", "Reality Protocol OK"];
-
-    function playPop() {
+    function playPop(freq) {
         const osc = audioCtx.createOscillator();
         const g = audioCtx.createGain();
-        osc.frequency.setValueAtTime(500 + (score % 100), audioCtx.currentTime);
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
         g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
         osc.connect(g); g.connect(audioCtx.destination);
         osc.start(); osc.stop(audioCtx.currentTime + 0.1);
     }
 
+    function updateNode() {
+        // Рандомная фигура
+        node.className = 'node shape-' + Math.floor(Math.random() * 4);
+        // Рандомный цвет
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        node.style.background = `radial-gradient(circle, ${color} 10%, #001100 90%)`;
+        node.style.boxShadow = `0 0 30px ${color}`;
+        
+        // Позиция
+        const x = Math.random() * (window.innerWidth - 100);
+        const y = Math.random() * (window.innerHeight - 250) + 150;
+        node.style.left = x + 'px';
+        node.style.top = y + 'px';
+    }
+
     node.addEventListener('touchstart', (e) => {
         e.preventDefault();
         if (audioCtx.state === 'suspended') audioCtx.resume();
+        
         score++;
         scoreEl.innerText = score;
         logEl.innerText = logs[Math.floor(Math.random() * logs.length)];
-        playPop();
-        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
         
-        node.style.left = Math.random() * (window.innerWidth - 100) + 'px';
-        node.style.top = Math.random() * (window.innerHeight - 200) + 150 + 'px';
+        playPop(400 + (Math.random() * 200));
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+        
+        updateNode();
     });
+
+    updateNode(); // Инициализация
 </script>
 </body>
 </html>
