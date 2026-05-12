@@ -6,28 +6,30 @@
     <title>Private IT Node // SLICE ZONE</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; padding: 0; background: #010a01; color: #00ff41; font-family: monospace; overflow: hidden; height: 100vh; touch-action: none; }
-        canvas { position: absolute; top: 0; left: 0; z-index: 5; }
-        #ui { position: relative; z-index: 10; text-align: center; padding: 15px; background: rgba(0,0,0,0.8); border-bottom: 2px solid #00ff41; pointer-events: none; }
-        #score-val { font-size: 36px; color: #fff; text-shadow: 0 0 15px #00ff41; }
+        body { margin: 0; padding: 0; background: #010a01; color: #00ff41; font-family: monospace; overflow: hidden; height: 100vh; touch-action: none; -webkit-user-select: none; user-select: none; }
+        canvas { position: absolute; top: 0; left: 0; z-index: 5; pointer-events: none; }
+        
+        #ui { position: relative; z-index: 10; text-align: center; padding: 20px; background: rgba(0,0,0,0.85); border-bottom: 2px solid #00ff41; pointer-events: none; transition: all 0.1s; }
+        #score-val { font-size: 38px; color: #fff; text-shadow: 0 0 15px #00ff41; }
+        #combo-view { font-size: 16px; color: #ffcc00; height: 16px; font-weight: bold; }
+        
         #start-prompt { 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 100; text-align: center; font-size: 18px; background: rgba(0,0,0,0.9);
-            padding: 20px; border: 1px solid #00ff41; cursor: pointer;
+            z-index: 100; text-align: center; font-size: 18px; background: rgba(0,0,0,0.95);
+            padding: 30px; border: 2px solid #00ff41; cursor: pointer; color: #fff; text-transform: uppercase; letter-spacing: 2px;
         }
     </style>
 </head>
 <body>
-    <div id="start-prompt">🦾 НАЖМИ, ЧТОБЫ ЗАПУСТИТЬ УЗЛЫ</div>
+    <div id="start-prompt">🦾 НАЖМИ, ЧТОБЫ ВОЙТИ В ЗОНУ 🦾</div>
     
     <div id="ui">
-        <div style="letter-spacing: 2px;">FIREWALL SLICER // CORE</div>
+        <div style="letter-spacing: 3px; font-size: 14px; color: #00ff41;">FIREWALL SLICER // CORE.OS</div>
         <div id="score-val">0</div>
+        <div id="combo-view"></div>
     </div>
     
     <canvas id="gameCanvas"></canvas>
-    
-    <!-- Музыка (назови файл music.mp3 на гитхабе) -->
     <audio id="bgMusic" src="music.mp3" loop></audio>
 
 <script>
@@ -38,106 +40,141 @@
     const ctx = canvas.getContext('2d');
     const music = document.getElementById('bgMusic');
     const startPrompt = document.getElementById('start-prompt');
+    const ui = document.getElementById('ui');
     
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
     let score = 0;
     let objects = [];
+    let particles = [];
     let trail = []; 
     let gameActive = false;
+    let slicedThisFrame = 0;
 
-    // Запуск игры по клику (нужно для музыки и звука)
     startPrompt.addEventListener('click', () => {
         gameActive = true;
         startPrompt.style.display = 'none';
         music.play().catch(() => console.log("Музыка не найдена, играем без неё"));
-        if (window.AudioContext || window.webkitAudioContext) {
-            audioCtx.resume();
-        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
     });
 
+    // Аудио движок
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
     function playSliceSound() {
         const osc = audioCtx.createOscillator();
         const g = audioCtx.createGain();
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(800, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
-        g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        g.gain.setValueAtTime(0.15, audioCtx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
         osc.connect(g); g.connect(audioCtx.destination);
         osc.start(); osc.stop(audioCtx.currentTime + 0.1);
     }
 
+    // Частицы взрыва
+    class Particle {
+        constructor(x, y, color) {
+            this.x = x; this.y = y;
+            this.size = Math.random() * 4;
+            this.speedX = (Math.random() - 0.5) * 8;
+            this.speedY = (Math.random() - 0.5) * 8;
+            this.life = 1.0; this.color = color;
+        }
+        update() { this.x += this.speedX; this.y += this.speedY; this.life -= 0.02; }
+        draw() { ctx.fillStyle = this.color; ctx.globalAlpha = this.life; ctx.fillRect(this.x, this.y, this.size, this.size); ctx.globalAlpha = 1; }
+    }
+
+    // Класс объектов (узлы и бомбы)
     class DataNode {
-        constructor() {
+        constructor(isBomb = false) {
             this.x = 50 + Math.random() * (canvas.width - 100);
             this.y = canvas.height + 50;
-            this.size = 40 + Math.random() * 20;
+            this.size = isBomb ? 55 : 45 + Math.random() * 20;
             this.speedX = (Math.random() - 0.5) * 6;
-            this.speedY = - (14 + Math.random() * 6); // Сила вылета
+            this.speedY = - (15 + Math.random() * 6);
             this.gravity = 0.3;
             this.isSliced = false;
+            this.isBomb = isBomb;
+            this.color = isBomb ? "#ff0000" : "#00ff41";
             this.rotation = 0;
-            this.rotSpeed = (Math.random() - 0.5) * 0.1;
+            this.rotSpeed = (Math.random() - 0.5) * 0.18;
         }
-        update() {
-            this.x += this.speedX;
-            this.speedY += this.gravity;
-            this.y += this.speedY;
-            this.rotation += this.rotSpeed;
-        }
+        update() { this.x += this.speedX; this.speedY += this.gravity; this.y += this.speedY; this.rotation += this.rotSpeed; }
         draw() {
-            ctx.save();
-            ctx.translate(this.x + this.size/2, this.y + this.size/2);
-            ctx.rotate(this.rotation);
-            ctx.shadowBlur = 15; ctx.shadowColor = "#00ff41";
-            ctx.strokeStyle = "#00ff41"; ctx.lineWidth = 3;
-            
-            if (!this.isSliced) {
-                ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
+            ctx.save(); ctx.translate(this.x + this.size/2, this.y + this.size/2); ctx.rotate(this.rotation);
+            ctx.shadowBlur = 15; ctx.shadowColor = this.color; ctx.strokeStyle = this.color; ctx.lineWidth = 3;
+            if (this.isBomb) {
+                ctx.beginPath(); ctx.moveTo(0, -this.size/2); ctx.lineTo(this.size/2, 0); ctx.lineTo(0, this.size/2); ctx.lineTo(-this.size/2, 0); ctx.closePath(); ctx.stroke();
+                ctx.fillStyle = "rgba(255,0,0,0.2)"; ctx.fill();
             } else {
-                // Две половинки при разрезе
-                ctx.beginPath(); ctx.moveTo(-this.size, 0); ctx.lineTo(this.size, 0); ctx.stroke();
+                ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
             }
             ctx.restore();
         }
     }
 
+    // Обработка свайпа (реза)
     function handleInput(ex, ey) {
         if (!gameActive) return;
         trail.push({x: ex, y: ey, life: 1.0});
 
-        objects.forEach(obj => {
+        slicedThisFrame = 0;
+        objects.forEach((obj, index) => {
+            if (obj.isSliced) return;
             let dx = ex - (obj.x + obj.size/2);
             let dy = ey - (obj.y + obj.size/2);
             let dist = Math.sqrt(dx*dx + dy*dy);
 
-            if (!obj.isSliced && dist < obj.size) {
+            if (dist < obj.size) {
                 obj.isSliced = true;
-                score++;
+                // Эффект взрыва
+                for(let i=0; i<15; i++) particles.push(new Particle(obj.x + obj.size/2, obj.y + obj.size/2, obj.color));
+                
+                if (obj.isBomb) {
+                    // Бомба - тряска и потеря очков
+                    score = Math.max(0, score - 15);
+                    ui.style.transform = "translate(0, 10px)";
+                    setTimeout(() => ui.style.transform = "translate(0,0)", 100);
+                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+                } else {
+                    // Разрез узла - очки и вибрация
+                    slicedThisFrame++;
+                    score++;
+                    playSliceSound();
+                    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+                }
                 document.getElementById('score-val').innerText = score;
-                playSliceSound();
-                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+                objects.splice(index, 1);
             }
         });
+        
+        // Комбо
+        if (slicedThisFrame >= 2) {
+            document.getElementById('combo-view').innerText = "COMBO! +" + slicedThisFrame + " NODES";
+            score += slicedThisFrame - 1; // Бонус
+            document.getElementById('score-val').innerText = score;
+            setTimeout(() => document.getElementById('combo-view').innerText = "", 800);
+        }
     }
 
+    // Обработка движений
     window.addEventListener('touchmove', (e) => {
         const touch = e.touches[0];
         handleInput(touch.clientX, touch.clientY);
     });
 
+    // Главный цикл
     function gameLoop() {
-        ctx.fillStyle = "rgba(1, 10, 1, 0.4)"; // Эффект шлейфа
+        ctx.fillStyle = "rgba(1, 10, 1, 0.4)"; // Шлейф
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         if (gameActive) {
-            // Отрисовка следа свайпа
+            // Рисуем след свайпа
             if (trail.length > 1) {
-                ctx.beginPath();
-                ctx.strokeStyle = "#fff"; ctx.lineWidth = 5; ctx.lineCap = "round";
+                ctx.beginPath(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 6; ctx.lineCap = "round";
                 ctx.moveTo(trail[0].x, trail[0].y);
                 for(let i=1; i<trail.length; i++) {
                     ctx.lineTo(trail[i].x, trail[i].y);
@@ -147,19 +184,25 @@
                 trail = trail.filter(t => t.life > 0);
             }
 
-            // Частота появления (бананов) узлов
-            if (Math.random() < 0.05) objects.push(new DataNode());
+            // Спавн узлов и бомб
+            if (Math.random() < 0.065) {
+                let isBomb = Math.random() < 0.18; // 18% шанс на бомбу
+                objects.push(new DataNode(isBomb));
+            }
 
             objects.forEach((obj, index) => {
-                obj.update();
-                obj.draw();
+                obj.update(); obj.draw();
                 if (obj.y > canvas.height + 150) objects.splice(index, 1);
             });
-        }
 
+            // Эффекты
+            particles.forEach((p, index) => {
+                p.update(); p.draw();
+                if (p.life <= 0) particles.splice(index, 1);
+            });
+        }
         requestAnimationFrame(gameLoop);
     }
-
     gameLoop();
 </script>
 </body>
