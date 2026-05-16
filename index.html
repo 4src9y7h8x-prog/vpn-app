@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ELITE SLICER v5.0 ULTRA</title>
+    <title>NET_OPTIMIZER v5.5 ULTRA</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
@@ -15,25 +15,29 @@
             font-family: 'Courier New', monospace; overflow: hidden; 
             height: 100vh; touch-action: none; user-select: none;
         }
-        #bg-container { position: fixed; inset: 0; background: #000 url('IMG_2080.png') no-repeat center center; background-size: cover; z-index: 0; transition: transform 0.1s; }
-        #bg-overlay { position: absolute; inset: 0; background: radial-gradient(circle, rgba(0,20,0,0.2) 0%, rgba(0,0,0,0.9) 100%); z-index: 1; }
+        #bg-container { position: fixed; inset: 0; background: #000 url('IMG_2080.png') no-repeat center center; background-size: cover; z-index: 0; transition: transform 0.3s, filter 0.3s; }
+        #bg-overlay { position: absolute; inset: 0; background: radial-gradient(circle, rgba(0,10,0,0.1) 0%, rgba(0,0,0,0.95) 100%); z-index: 1; }
         canvas { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
-        #matrix-canvas { z-index: 2; opacity: 0.15; }
+        #matrix-canvas { z-index: 2; opacity: 0.12; transition: filter 0.3s; }
 
         /* UI Elements */
-        #ui-header { position: relative; z-index: 50; padding: 20px; display: flex; justify-content: space-between; }
-        #score-val { font-size: 50px; font-weight: 900; color: #fff; text-shadow: 0 0 20px var(--neon-green); line-height: 1; }
-        .hp-container { display: flex; gap: 5px; margin-top: 5px; }
-        .hp-dot { width: 15px; height: 15px; border: 1px solid var(--neon-red); background: var(--neon-red); box-shadow: 0 0 10px var(--neon-red); }
-        .hp-dot.lost { background: transparent; box-shadow: none; opacity: 0.3; }
+        #ui-header { position: relative; z-index: 50; padding: 25px 20px; display: flex; justify-content: space-between; }
+        #score-val { font-size: 52px; font-weight: 900; color: #fff; text-shadow: 0 0 20px var(--neon-green); line-height: 1; }
+        .hp-container { display: flex; gap: 8px; margin-top: 8px; }
+        .hp-dot { width: 14px; height: 14px; border: 2px solid var(--neon-blue); background: var(--neon-blue); box-shadow: 0 0 12px var(--neon-blue); transition: all 0.2s; }
+        .hp-dot.lost { background: transparent; box-shadow: none; opacity: 0.2; border-color: var(--neon-red); }
+        .system-status { font-size: 11px; color: #aaa; margin-top: 4px; letter-spacing: 1px; }
 
         /* Screens */
-        .modal { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-        .btn-main { background: var(--neon-green); color: #000; border: none; padding: 15px 40px; font-size: 20px; font-weight: bold; cursor: pointer; box-shadow: 0 0 30px var(--neon-green); margin-top: 20px; }
+        .modal { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; backdrop-filter: blur(4px); }
+        .btn-main { background: transparent; color: var(--neon-green); border: 2px solid var(--neon-green); padding: 15px 45px; font-size: 18px; font-weight: bold; font-family: 'Courier New', monospace; cursor: pointer; box-shadow: 0 0 15px rgba(0,255,65,0.2); transition: all 0.2s; letter-spacing: 2px; }
+        .btn-main:hover { background: var(--neon-green); color: #000; box-shadow: 0 0 30px var(--neon-green); }
         
-        /* Animations */
-        @keyframes shake { 0%, 100% { transform: translate(0,0); } 25% { transform: translate(-10px, 5px); } 50% { transform: translate(10px, -5px); } }
-        .shake { animation: shake 0.2s ease-in-out; }
+        /* Freeze Effect Overlay */
+        .freeze-active #bg-container { filter: hue-rotate(140deg) saturate(1.5); }
+
+        @keyframes shake { 0%, 100% { transform: translate(0,0); } 25% { transform: translate(-8px, 4px); } 50% { transform: translate(8px, -4px); } }
+        .shake { animation: shake 0.15s ease-in-out; }
     </style>
 </head>
 <body id="main-body">
@@ -42,16 +46,16 @@
 
     <!-- Экран старта -->
     <div id="start-screen" class="modal">
-        <h1 style="text-shadow: 0 0 15px var(--neon-green);">ELITE_SLICER_v5</h1>
-        <p style="color: var(--neon-blue);">STABLE UPLINK DETECTED</p>
-        <button id="start-btn" class="btn-main">CONNECT</button>
+        <h1 style="text-shadow: 0 0 15px var(--neon-green); font-size: 32px; margin-bottom: 5px;">NET_OPTIMIZER v5.5</h1>
+        <p style="color: var(--neon-blue); margin-bottom: 30px; font-size: 14px; letter-spacing: 1px;">CORE_DIAGNOSTIC: READY FOR CALIBRATION</p>
+        <button id="start-btn" class="btn-main">INITIALIZE</button>
     </div>
 
     <!-- Экран смерти -->
     <div id="death-screen" class="modal" style="display: none;">
-        <h1 style="color: var(--neon-red); text-shadow: 0 0 15px var(--neon-red);">CONNECTION_LOST</h1>
-        <div id="final-stats" style="margin: 20px 0; line-height: 1.6;"></div>
-        <button id="restart-btn" class="btn-main">REBOOT SYSTEM</button>
+        <h1 style="color: var(--neon-red); text-shadow: 0 0 15px var(--neon-red); font-size: 28px;">DIAGNOSTIC_OVERFLOW</h1>
+        <div id="final-stats" style="margin: 25px 0; line-height: 1.8; color: #fff; font-size: 16px;"></div>
+        <button id="restart-btn" class="btn-main">REBOOT CORE</button>
     </div>
 
     <div id="ui-header">
@@ -60,10 +64,12 @@
             <div id="hp-box" class="hp-container">
                 <div class="hp-dot"></div><div class="hp-dot"></div><div class="hp-dot"></div>
             </div>
+            <div id="speed-ui" class="system-status">LOAD: 1.0x</div>
         </div>
         <div style="text-align: right;">
-            <div style="font-size: 10px;">COMBO</div>
-            <div id="combo-ui" style="font-size: 24px; color: var(--neon-gold); font-weight: bold;">X1</div>
+            <div style="font-size: 10px; color: #aaa; letter-spacing: 1px;">MULTIPLIER</div>
+            <div id="combo-ui" style="font-size: 32px; color: var(--neon-gold); font-weight: bold; text-shadow: 0 0 10px rgba(255,204,0,0.5);">X1</div>
+            <div id="freeze-ui" style="font-size: 11px; color: var(--neon-blue); display: none; font-weight: bold; margin-top: 5px;">BUFFER_DELAY_ACTIVE</div>
         </div>
     </div>
 
@@ -79,46 +85,109 @@
     const mCtx = mCanvas.getContext('2d');
     const body = document.getElementById('main-body');
 
-    let score = 0, hp = 3, combo = 1, gameActive = false, maxCombo = 1;
+    let score = 0, hp = 3, combo = 1, gameActive = false, maxCombo = 1, gameSpeed = 1.0;
     let objects = [], trail = [], particles = [], floatingTexts = [];
+    let freezeTimer = 0; // Время заморозки в кадрах
     let bgMusic = new Audio('music.mp3'); bgMusic.loop = true;
 
-    // Matrix BG
+    // Matrix Background Animation
     mCanvas.width = window.innerWidth; mCanvas.height = window.innerHeight;
     const drops = Array(Math.floor(mCanvas.width/20)).fill(1);
     function drawMatrix() {
-        mCtx.fillStyle = "rgba(0, 0, 0, 0.1)"; mCtx.fillRect(0, 0, mCanvas.width, mCanvas.height);
-        mCtx.fillStyle = "#0f0"; mCtx.font = "15px monospace";
+        mCtx.fillStyle = "rgba(0, 0, 0, 0.08)"; mCtx.fillRect(0, 0, mCanvas.width, mCanvas.height);
+        mCtx.fillStyle = freezeTimer > 0 ? "#00f2ff" : "#00ff41"; 
+        mCtx.font = "14px monospace";
         drops.forEach((y, i) => {
             mCtx.fillText(String.fromCharCode(0x30A0 + Math.random()*96), i*20, y*20);
-            if(y*20 > mCanvas.height && Math.random() > 0.975) drops[i] = 0;
+            if(y*20 > mCanvas.height && Math.random() > 0.98) drops[i] = 0;
             drops[i]++;
         });
     }
 
-    class DataNode {
+    class NetworkNode {
         constructor() {
-            this.size = 50;
-            this.x = Math.random() * (window.innerWidth - 60) + 30;
-            this.y = window.innerHeight + 50;
-            this.sy = -(12 + Math.random()*6);
-            this.sx = (Math.random() - 0.5) * 4;
+            this.size = 46;
+            this.x = Math.random() * (window.innerWidth - 80) + 40;
+            this.y = window.innerHeight + 40;
+            
+            // Базовая скорость вылета зависит от текущей сложности (gameSpeed)
+            let baseForce = 12 + Math.random() * 5 + (gameSpeed * 1.5);
+            this.sy = -baseForce;
+            this.sx = (Math.random() - 0.5) * 5;
+            
+            // Физика вращения куба
+            this.angle = Math.random() * Math.PI;
+            this.rotationSpeed = (Math.random() - 0.5) * 0.06;
+
+            // Очередь прошлых позиций для красивого шлейфа куба
+            this.history = [];
+
             const r = Math.random();
-            if(r < 0.15) { this.type = 'err'; this.color = 'rgb(255, 0, 60)'; }
-            else if(r > 0.9) { this.type = 'gold'; this.color = 'rgb(255, 204, 0)'; }
-            else { this.type = 'data'; this.color = 'rgb(0, 255, 65)'; }
+            if(r < 0.18) { 
+                this.type = 'err'; // Аномальный мусор
+                this.color = 'rgb(255, 0, 60)'; 
+            } else if(r > 0.92) { 
+                this.type = 'gold'; // Мультиплексор (бонус)
+                this.color = 'rgb(255, 204, 0)'; 
+            } else if(r > 0.83 && r <= 0.92) {
+                this.type = 'freeze'; // Замораживающий буфер
+                this.color = 'rgb(0, 242, 255)';
+            } else { 
+                this.type = 'data'; // Чистый пакет
+                this.color = 'rgb(0, 255, 65)'; 
+            }
         }
-        update() { this.x += this.sx; this.sy += 0.35; this.y += this.sy; }
+
+        update() {
+            // Сохраняем хвост объекта
+            this.history.push({x: this.x, y: this.y, angle: this.angle});
+            if(this.history.length > 5) this.history.shift();
+
+            // Если активен фриз, замедляем физику движения объекта в 3.5 раза
+            let currentMod = freezeTimer > 0 ? 0.28 : 1.0;
+
+            this.x += this.sx * currentMod;
+            this.sy += 0.32 * currentMod; // Гравитация
+            this.y += this.sy * currentMod;
+            this.angle += this.rotationSpeed * currentMod;
+        }
+
         draw() {
-            ctx.strokeStyle = this.color; ctx.lineWidth = 3; ctx.shadowBlur = 10; ctx.shadowColor = this.color;
-            ctx.strokeRect(this.x - 25, this.y - 25, 50, 50);
+            // Рисуем затухающий неоновый шлейф куба
+            this.history.forEach((pos, idx) => {
+                ctx.save();
+                ctx.translate(pos.x, pos.y);
+                ctx.rotate(pos.angle);
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = (idx / this.history.length) * 0.3;
+                ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
+                ctx.restore();
+            });
+
+            // Рисуем основной куб
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.angle);
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = this.color;
+            ctx.globalAlpha = 1.0;
+            ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
+            
+            // Внутреннее ядро для визуальной массивности кубика
+            ctx.fillStyle = this.color.replace('rgb', 'rgba').replace(')', ', 0.15)');
+            ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+            ctx.restore();
+            ctx.shadowBlur = 0; // Сброс тени
         }
     }
 
     function triggerShake() {
         body.classList.add('shake');
         if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-        setTimeout(() => body.classList.remove('shake'), 200);
+        setTimeout(() => body.classList.remove('shake'), 150);
     }
 
     function takeDamage() {
@@ -132,18 +201,42 @@
     function handleInput(x, y) {
         if(!gameActive) return;
         trail.push({x, y, life: 1.0});
+
         objects.forEach((obj, i) => {
-            if(Math.hypot(x - obj.x, y - obj.y) < 45) {
-                // Sparks
-                for(let p=0; p<15; p++) particles.push({x: obj.x, y: obj.y, sx: (Math.random()-0.5)*10, sy: (Math.random()-0.5)*10, life: 1, color: obj.color});
+            if(Math.hypot(x - obj.x, y - obj.y) < 48) {
+                // Продвинутые искры с гравитацией
+                for(let p=0; p<18; p++) {
+                    particles.push({
+                        x: obj.x, y: obj.y, 
+                        sx: (Math.random()-0.5)*12, sy: (Math.random()-0.5)*12, 
+                        life: 1.0, 
+                        decay: 0.02 + Math.random()*0.02,
+                        color: obj.color
+                    });
+                }
                 
                 if(obj.type === 'err') {
-                    combo = 1; takeDamage();
+                    // Кликнули по запрещенному пакету
+                    combo = 1; 
+                    if(freezeTimer > 0) freezeTimer = 0; // Сбиваем заморозку при ошибке
+                    takeDamage();
+                } else if(obj.type === 'freeze') {
+                    // Активация заморозки буфера
+                    freezeTimer = 240; // ~4 секунды при 60 FPS
+                    score += 150 * combo;
+                    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('heavy');
+                    floatingTexts.push({x: obj.x, y: obj.y, text: "BUFFER_DELAY", color: obj.color, life: 1});
                 } else {
-                    let pts = (obj.type === 'gold' ? 500 : 100) * combo;
+                    // Стандартный или золотой пакет
+                    let pts = (obj.type === 'gold' ? 400 : 100) * combo;
                     score += pts;
                     if(combo > maxCombo) maxCombo = combo;
                     combo++;
+                    
+                    // Повышаем сложность (скорость) каждые 500 набранных чистых очков
+                    gameSpeed = 1.0 + Math.floor(score / 500) * 0.12;
+                    if(gameSpeed > 2.5) gameSpeed = 2.5; // Ограничение максимума нагрузки
+
                     floatingTexts.push({x: obj.x, y: obj.y, text: `+${pts}`, color: obj.color, life: 1});
                     if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
                 }
@@ -156,20 +249,31 @@
     function updateUI() {
         document.getElementById('score-val').innerText = score;
         document.getElementById('combo-ui').innerText = "X" + combo;
+        document.getElementById('speed-ui').innerText = `LOAD: ${gameSpeed.toFixed(1)}x`;
+        
+        const freezeUI = document.getElementById('freeze-ui');
+        if(freezeTimer > 0) {
+            body.classList.add('freeze-active');
+            freezeUI.style.display = 'block';
+        } else {
+            body.classList.remove('freeze-active');
+            freezeUI.style.display = 'none';
+        }
     }
 
     function endGame() {
         gameActive = false;
         document.getElementById('death-screen').style.display = 'flex';
         document.getElementById('final-stats').innerHTML = `
-            DATA_EXTRACTED: ${score} MB<br>
-            MAX_STREAK: X${maxCombo}<br>
-            NODE_STATUS: DISCONNECTED
+            CLEAN_ROUTE_SCORE: ${score} Pts<br>
+            PEAK_EFFICIENCY: X${maxCombo}<br>
+            DIAGNOSTIC_LOG: BUFFER_OVERFLOW
         `;
     }
 
     function resetGame() {
-        score = 0; hp = 3; combo = 1; objects = []; particles = [];
+        score = 0; hp = 3; combo = 1; gameSpeed = 1.0; freezeTimer = 0;
+        objects = []; particles = []; trail = []; floatingTexts = [];
         document.querySelectorAll('.hp-dot').forEach(d => d.classList.remove('lost'));
         document.getElementById('death-screen').style.display = 'none';
         updateUI(); gameActive = true;
@@ -182,42 +286,85 @@
 
     document.getElementById('restart-btn').onclick = resetGame;
 
-    window.addEventListener('touchmove', (e) => {
-        e.preventDefault(); handleInput(e.touches[0].clientX, e.touches[0].clientY);
-    }, {passive: false});
+    // Плавное отслеживание пальца/мыши без рывков
+    function handleTouch(e) {
+        e.preventDefault();
+        if(e.touches && e.touches.length > 0) {
+            handleInput(e.touches[0].clientX, e.touches[0].clientY);
+        }
+    }
+    window.addEventListener('touchmove', handleTouch, {passive: false});
+    window.addEventListener('touchstart', handleTouch, {passive: false});
 
     function loop() {
         canvas.width = window.innerWidth; canvas.height = window.innerHeight;
         drawMatrix();
+
+        if(freezeTimer > 0) {
+            freezeTimer--;
+            if(freezeTimer === 0) updateUI();
+        }
+
         if(gameActive) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // Trail
+
+            // Плавный неоновый след лезвия (Trail)
             if(trail.length > 1) {
-                ctx.beginPath(); ctx.strokeStyle = "#fff"; ctx.lineWidth = 4;
-                ctx.moveTo(trail[0].x, trail[0].y);
-                trail.forEach(t => ctx.lineTo(t.x, t.y));
-                ctx.stroke();
-                trail.forEach(t => t.life -= 0.1); trail = trail.filter(t => t.life > 0);
+                for(let i = 1; i < trail.length; i++) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${trail[i].life})`;
+                    ctx.lineWidth = 6 * trail[i].life;
+                    ctx.lineCap = 'round';
+                    ctx.moveTo(trail[i-1].x, trail[i-1].y);
+                    ctx.lineTo(trail[i].x, trail[i].y);
+                    ctx.stroke();
+                }
+                trail.forEach(t => t.life -= 0.08); 
+                trail = trail.filter(t => t.life > 0);
             }
-            // Objects
-            if(Math.random() < 0.04) objects.push(new DataNode());
+
+            // Частота появления объектов зависит от скорости игры и таймера заморозки
+            let spawnChance = freezeTimer > 0 ? 0.015 : (0.035 * gameSpeed);
+            if(Math.random() < spawnChance && objects.length < 5) {
+                objects.push(new NetworkNode());
+            }
+
+            // Обновление и отрисовка кубов
             objects.forEach((obj, i) => {
                 obj.update(); obj.draw();
-                if(obj.y > window.innerHeight + 100) { 
-                    if(obj.type !== 'err') { combo = 1; takeDamage(); }
+                // Если объект улетел вниз экрана
+                if(obj.y > window.innerHeight + 80) { 
+                    if(obj.type !== 'err' && obj.type !== 'freeze') { 
+                        // Пропустили важный пакет — сброс комбо и урон
+                        combo = 1; takeDamage(); 
+                    }
                     objects.splice(i, 1); updateUI();
                 }
             });
-            // Particles & Text
+
+            // Отрисовка летящих искр (Частиц) с физикой
             particles.forEach((p, i) => {
-                p.x += p.sx; p.y += p.sy; p.life -= 0.03;
+                let pMod = freezeTimer > 0 ? 0.3 : 1.0;
+                p.x += p.sx * pMod;
+                p.y += p.sy * pMod + 0.15; // Легкая гравитация на искры
+                p.life -= p.decay;
+                
                 ctx.fillStyle = p.color.replace('rgb', 'rgba').replace(')', `, ${p.life})`);
-                ctx.fillRect(p.x, p.y, 2, 2);
+                ctx.shadowBlur = p.life * 8;
+                ctx.shadowColor = p.color;
+                ctx.fillRect(p.x, p.y, 3, 3);
+                
                 if(p.life <= 0) particles.splice(i, 1);
             });
+            ctx.shadowBlur = 0;
+
+            // Всплывающие текстовые очки (+100, BUFFER_DELAY и т.д.)
             floatingTexts.forEach((f, i) => {
-                ctx.fillStyle = f.color; ctx.font = "20px Courier";
-                ctx.fillText(f.text, f.x, f.y); f.y -= 2; f.life -= 0.02;
+                ctx.fillStyle = f.color;
+                ctx.font = "bold 18px 'Courier New'";
+                ctx.fillText(f.text, f.x - 20, f.y);
+                f.y -= 1.2; 
+                f.life -= 0.025;
                 if(f.life <= 0) floatingTexts.splice(i, 1);
             });
         }
