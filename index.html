@@ -15,26 +15,38 @@
             font-family: 'Courier New', monospace; overflow: hidden; 
             height: 100vh; touch-action: none; user-select: none;
         }
-        #bg-container { position: fixed; inset: 0; background: #000 url('IMG_2080.png') no-repeat center center; background-size: cover; z-index: 0; transition: transform 0.3s, filter 0.3s; }
-        #bg-overlay { position: absolute; inset: 0; background: radial-gradient(circle, rgba(0,10,0,0.1) 0%, rgba(0,0,0,0.95) 100%); z-index: 1; }
+        /* Полностью автономный фон без картинок */
+        #bg-container { 
+            position: fixed; 
+            inset: 0; 
+            background: linear-gradient(135deg, #020b05 0%, #000000 100%); 
+            z-index: 0; 
+            transition: filter 0.3s; 
+        }
+        #bg-overlay { 
+            position: absolute; 
+            inset: 0; 
+            background: radial-gradient(circle, rgba(0,20,0,0.15) 0%, rgba(0,0,0,0.95) 100%); 
+            z-index: 1; 
+        }
         canvas { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
-        #matrix-canvas { z-index: 2; opacity: 0.12; transition: filter 0.3s; }
+        #matrix-canvas { z-index: 2; opacity: 0.15; }
 
         /* UI Elements */
-        #ui-header { position: relative; z-index: 50; padding: 25px 20px; display: flex; justify-content: space-between; }
+        #ui-header { position: relative; z-index: 50; padding: 25px 20px; display: flex; justify-content: space-between; box-sizing: border-box; width: 100%; }
         #score-val { font-size: 52px; font-weight: 900; color: #fff; text-shadow: 0 0 20px var(--neon-green); line-height: 1; }
         .hp-container { display: flex; gap: 8px; margin-top: 8px; }
         .hp-dot { width: 14px; height: 14px; border: 2px solid var(--neon-blue); background: var(--neon-blue); box-shadow: 0 0 12px var(--neon-blue); transition: all 0.2s; }
         .hp-dot.lost { background: transparent; box-shadow: none; opacity: 0.2; border-color: var(--neon-red); }
         .system-status { font-size: 11px; color: #aaa; margin-top: 4px; letter-spacing: 1px; }
 
-        /* Screens */
-        .modal { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; backdrop-filter: blur(4px); }
+        /* Screens / Modals */
+        .modal { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.94); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; backdrop-filter: blur(5px); }
         .btn-main { background: transparent; color: var(--neon-green); border: 2px solid var(--neon-green); padding: 15px 45px; font-size: 18px; font-weight: bold; font-family: 'Courier New', monospace; cursor: pointer; box-shadow: 0 0 15px rgba(0,255,65,0.2); transition: all 0.2s; letter-spacing: 2px; }
         .btn-main:hover { background: var(--neon-green); color: #000; box-shadow: 0 0 30px var(--neon-green); }
         
-        /* Freeze Effect Overlay */
-        .freeze-active #bg-container { filter: hue-rotate(140deg) saturate(1.5); }
+        /* Эффект заморозки */
+        .freeze-active #bg-container { filter: hue-rotate(140deg) saturate(1.8); }
 
         @keyframes shake { 0%, 100% { transform: translate(0,0); } 25% { transform: translate(-8px, 4px); } 50% { transform: translate(8px, -4px); } }
         .shake { animation: shake 0.15s ease-in-out; }
@@ -46,7 +58,7 @@
 
     <!-- Экран старта -->
     <div id="start-screen" class="modal">
-        <h1 style="text-shadow: 0 0 15px var(--neon-green); font-size: 32px; margin-bottom: 5px;">NET_OPTIMIZER v5.5</h1>
+        <h1 style="text-shadow: 0 0 15px var(--neon-green); font-size: 32px; margin-bottom: 5px; color: #fff;">NET_OPTIMIZER v5.5</h1>
         <p style="color: var(--neon-blue); margin-bottom: 30px; font-size: 14px; letter-spacing: 1px;">CORE_DIAGNOSTIC: READY FOR CALIBRATION</p>
         <button id="start-btn" class="btn-main">INITIALIZE</button>
     </div>
@@ -76,8 +88,12 @@
     <canvas id="gameCanvas"></canvas>
 
 <script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
+    // Инициализация Telegram WebApp с защитой от запуска в обычном браузере
+    const tg = window.Telegram ? window.Telegram.WebApp : null;
+    if (tg) {
+        tg.expand();
+        if (tg.ready) tg.ready();
+    }
 
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -87,19 +103,28 @@
 
     let score = 0, hp = 3, combo = 1, gameActive = false, maxCombo = 1, gameSpeed = 1.0;
     let objects = [], trail = [], particles = [], floatingTexts = [];
-    let freezeTimer = 0; // Время заморозки в кадрах
-    let bgMusic = new Audio('music.mp3'); bgMusic.loop = true;
+    let freezeTimer = 0;
 
-    // Matrix Background Animation
-    mCanvas.width = window.innerWidth; mCanvas.height = window.innerHeight;
-    const drops = Array(Math.floor(mCanvas.width/20)).fill(1);
+    // Ресайз холстов под размер экрана устройства
+    function resizeCanvases() {
+        mCanvas.width = window.innerWidth;
+        mCanvas.height = window.innerHeight;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvases);
+    resizeCanvases();
+
+    // Матричный фон
+    const drops = Array(Math.floor(mCanvas.width / 20)).fill(1);
     function drawMatrix() {
-        mCtx.fillStyle = "rgba(0, 0, 0, 0.08)"; mCtx.fillRect(0, 0, mCanvas.width, mCanvas.height);
+        mCtx.fillStyle = "rgba(0, 0, 0, 0.08)";
+        mCtx.fillRect(0, 0, mCanvas.width, mCanvas.height);
         mCtx.fillStyle = freezeTimer > 0 ? "#00f2ff" : "#00ff41"; 
         mCtx.font = "14px monospace";
         drops.forEach((y, i) => {
-            mCtx.fillText(String.fromCharCode(0x30A0 + Math.random()*96), i*20, y*20);
-            if(y*20 > mCanvas.height && Math.random() > 0.98) drops[i] = 0;
+            mCtx.fillText(String.fromCharCode(0x30A0 + Math.random() * 96), i * 20, y * 20);
+            if (y * 20 > mCanvas.height && Math.random() > 0.98) drops[i] = 0;
             drops[i]++;
         });
     }
@@ -110,50 +135,43 @@
             this.x = Math.random() * (window.innerWidth - 80) + 40;
             this.y = window.innerHeight + 40;
             
-            // Базовая скорость вылета зависит от текущей сложности (gameSpeed)
             let baseForce = 12 + Math.random() * 5 + (gameSpeed * 1.5);
             this.sy = -baseForce;
             this.sx = (Math.random() - 0.5) * 5;
             
-            // Физика вращения куба
             this.angle = Math.random() * Math.PI;
             this.rotationSpeed = (Math.random() - 0.5) * 0.06;
-
-            // Очередь прошлых позиций для красивого шлейфа куба
             this.history = [];
 
             const r = Math.random();
-            if(r < 0.18) { 
-                this.type = 'err'; // Аномальный мусор
+            if (r < 0.18) { 
+                this.type = 'err'; 
                 this.color = 'rgb(255, 0, 60)'; 
-            } else if(r > 0.92) { 
-                this.type = 'gold'; // Мультиплексор (бонус)
+            } else if (r > 0.92) { 
+                this.type = 'gold'; 
                 this.color = 'rgb(255, 204, 0)'; 
-            } else if(r > 0.83 && r <= 0.92) {
-                this.type = 'freeze'; // Замораживающий буфер
+            } else if (r > 0.83 && r <= 0.92) {
+                this.type = 'freeze'; 
                 this.color = 'rgb(0, 242, 255)';
             } else { 
-                this.type = 'data'; // Чистый пакет
+                this.type = 'data'; 
                 this.color = 'rgb(0, 255, 65)'; 
             }
         }
 
         update() {
-            // Сохраняем хвост объекта
             this.history.push({x: this.x, y: this.y, angle: this.angle});
-            if(this.history.length > 5) this.history.shift();
+            if (this.history.length > 5) this.history.shift();
 
-            // Если активен фриз, замедляем физику движения объекта в 3.5 раза
             let currentMod = freezeTimer > 0 ? 0.28 : 1.0;
 
             this.x += this.sx * currentMod;
-            this.sy += 0.32 * currentMod; // Гравитация
+            this.sy += 0.32 * currentMod; 
             this.y += this.sy * currentMod;
             this.angle += this.rotationSpeed * currentMod;
         }
 
         draw() {
-            // Рисуем затухающий неоновый шлейф куба
             this.history.forEach((pos, idx) => {
                 ctx.save();
                 ctx.translate(pos.x, pos.y);
@@ -165,7 +183,6 @@
                 ctx.restore();
             });
 
-            // Рисуем основной куб
             ctx.save();
             ctx.translate(this.x, this.y);
             ctx.rotate(this.angle);
@@ -176,69 +193,63 @@
             ctx.globalAlpha = 1.0;
             ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
             
-            // Внутреннее ядро для визуальной массивности кубика
             ctx.fillStyle = this.color.replace('rgb', 'rgba').replace(')', ', 0.15)');
             ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
             ctx.restore();
-            ctx.shadowBlur = 0; // Сброс тени
+            ctx.shadowBlur = 0; 
         }
     }
 
     function triggerShake() {
         body.classList.add('shake');
-        if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+        if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
         setTimeout(() => body.classList.remove('shake'), 150);
     }
 
     function takeDamage() {
         hp--;
         const dots = document.querySelectorAll('.hp-dot');
-        if(dots[hp]) dots[hp].classList.add('lost');
+        if (dots[hp]) dots[hp].classList.add('lost');
         triggerShake();
-        if(hp <= 0) endGame();
+        if (hp <= 0) endGame();
     }
 
     function handleInput(x, y) {
-        if(!gameActive) return;
+        if (!gameActive) return;
         trail.push({x, y, life: 1.0});
 
         objects.forEach((obj, i) => {
-            if(Math.hypot(x - obj.x, y - obj.y) < 48) {
-                // Продвинутые искры с гравитацией
-                for(let p=0; p<18; p++) {
+            if (Math.hypot(x - obj.x, y - obj.y) < 48) {
+                for (let p = 0; p < 18; p++) {
                     particles.push({
                         x: obj.x, y: obj.y, 
-                        sx: (Math.random()-0.5)*12, sy: (Math.random()-0.5)*12, 
+                        sx: (Math.random() - 0.5) * 12, sy: (Math.random() - 0.5) * 12, 
                         life: 1.0, 
-                        decay: 0.02 + Math.random()*0.02,
+                        decay: 0.02 + Math.random() * 0.02,
                         color: obj.color
                     });
                 }
                 
-                if(obj.type === 'err') {
-                    // Кликнули по запрещенному пакету
+                if (obj.type === 'err') {
                     combo = 1; 
-                    if(freezeTimer > 0) freezeTimer = 0; // Сбиваем заморозку при ошибке
+                    if (freezeTimer > 0) freezeTimer = 0; 
                     takeDamage();
-                } else if(obj.type === 'freeze') {
-                    // Активация заморозки буфера
-                    freezeTimer = 240; // ~4 секунды при 60 FPS
+                } else if (obj.type === 'freeze') {
+                    freezeTimer = 240; 
                     score += 150 * combo;
-                    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('heavy');
+                    if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('heavy');
                     floatingTexts.push({x: obj.x, y: obj.y, text: "BUFFER_DELAY", color: obj.color, life: 1});
                 } else {
-                    // Стандартный или золотой пакет
                     let pts = (obj.type === 'gold' ? 400 : 100) * combo;
                     score += pts;
-                    if(combo > maxCombo) maxCombo = combo;
+                    if (combo > maxCombo) maxCombo = combo;
                     combo++;
                     
-                    // Повышаем сложность (скорость) каждые 500 набранных чистых очков
                     gameSpeed = 1.0 + Math.floor(score / 500) * 0.12;
-                    if(gameSpeed > 2.5) gameSpeed = 2.5; // Ограничение максимума нагрузки
+                    if (gameSpeed > 2.5) gameSpeed = 2.5; 
 
                     floatingTexts.push({x: obj.x, y: obj.y, text: `+${pts}`, color: obj.color, life: 1});
-                    if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+                    if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
                 }
                 objects.splice(i, 1);
                 updateUI();
@@ -252,7 +263,7 @@
         document.getElementById('speed-ui').innerText = `LOAD: ${gameSpeed.toFixed(1)}x`;
         
         const freezeUI = document.getElementById('freeze-ui');
-        if(freezeTimer > 0) {
+        if (freezeTimer > 0) {
             body.classList.add('freeze-active');
             freezeUI.style.display = 'block';
         } else {
@@ -281,15 +292,14 @@
 
     document.getElementById('start-btn').onclick = () => {
         document.getElementById('start-screen').style.display = 'none';
-        gameActive = true; bgMusic.play().catch(() => {});
+        gameActive = true;
     };
 
     document.getElementById('restart-btn').onclick = resetGame;
 
-    // Плавное отслеживание пальца/мыши без рывков
     function handleTouch(e) {
         e.preventDefault();
-        if(e.touches && e.touches.length > 0) {
+        if (e.touches && e.touches.length > 0) {
             handleInput(e.touches[0].clientX, e.touches[0].clientY);
         }
     }
@@ -297,20 +307,19 @@
     window.addEventListener('touchstart', handleTouch, {passive: false});
 
     function loop() {
-        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
         drawMatrix();
 
-        if(freezeTimer > 0) {
+        if (freezeTimer > 0) {
             freezeTimer--;
-            if(freezeTimer === 0) updateUI();
+            if (freezeTimer === 0) updateUI();
         }
 
-        if(gameActive) {
+        if (gameActive) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Плавный неоновый след лезвия (Trail)
-            if(trail.length > 1) {
-                for(let i = 1; i < trail.length; i++) {
+            // Отрисовка следа пальца (Trail)
+            if (trail.length > 1) {
+                for (let i = 1; i < trail.length; i++) {
                     ctx.beginPath();
                     ctx.strokeStyle = `rgba(255, 255, 255, ${trail[i].life})`;
                     ctx.lineWidth = 6 * trail[i].life;
@@ -323,30 +332,27 @@
                 trail = trail.filter(t => t.life > 0);
             }
 
-            // Частота появления объектов зависит от скорости игры и таймера заморозки
             let spawnChance = freezeTimer > 0 ? 0.015 : (0.035 * gameSpeed);
-            if(Math.random() < spawnChance && objects.length < 5) {
+            if (Math.random() < spawnChance && objects.length < 5) {
                 objects.push(new NetworkNode());
             }
 
-            // Обновление и отрисовка кубов
+            // Обновление кубов
             objects.forEach((obj, i) => {
                 obj.update(); obj.draw();
-                // Если объект улетел вниз экрана
-                if(obj.y > window.innerHeight + 80) { 
-                    if(obj.type !== 'err' && obj.type !== 'freeze') { 
-                        // Пропустили важный пакет — сброс комбо и урон
+                if (obj.y > window.innerHeight + 80) { 
+                    if (obj.type !== 'err' && obj.type !== 'freeze') { 
                         combo = 1; takeDamage(); 
                     }
                     objects.splice(i, 1); updateUI();
                 }
             });
 
-            // Отрисовка летящих искр (Частиц) с физикой
+            // Частицы (искры)
             particles.forEach((p, i) => {
                 let pMod = freezeTimer > 0 ? 0.3 : 1.0;
                 p.x += p.sx * pMod;
-                p.y += p.sy * pMod + 0.15; // Легкая гравитация на искры
+                p.y += p.sy * pMod + 0.15; 
                 p.life -= p.decay;
                 
                 ctx.fillStyle = p.color.replace('rgb', 'rgba').replace(')', `, ${p.life})`);
@@ -354,18 +360,18 @@
                 ctx.shadowColor = p.color;
                 ctx.fillRect(p.x, p.y, 3, 3);
                 
-                if(p.life <= 0) particles.splice(i, 1);
+                if (p.life <= 0) particles.splice(i, 1);
             });
             ctx.shadowBlur = 0;
 
-            // Всплывающие текстовые очки (+100, BUFFER_DELAY и т.д.)
+            // Текст очков
             floatingTexts.forEach((f, i) => {
                 ctx.fillStyle = f.color;
                 ctx.font = "bold 18px 'Courier New'";
                 ctx.fillText(f.text, f.x - 20, f.y);
                 f.y -= 1.2; 
                 f.life -= 0.025;
-                if(f.life <= 0) floatingTexts.splice(i, 1);
+                if (f.life <= 0) floatingTexts.splice(i, 1);
             });
         }
         requestAnimationFrame(loop);
