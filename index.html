@@ -3,70 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>NET_OPTIMIZER v5.5 ULTRA</title>
+    <title>NET_OPTIMIZER v5.5</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --neon-green: #00ff41; --neon-red: #ff003c;
-            --neon-gold: #ffcc00; --neon-blue: #00f2ff;
-        }
         body { 
-            margin: 0; padding: 0; background: #000; color: var(--neon-green); 
+            margin: 0; padding: 0; background: #000; color: #00ff41; 
             font-family: 'Courier New', monospace; overflow: hidden; 
             height: 100vh; touch-action: none; user-select: none;
         }
-        /* Полностью автономный фон без картинок */
         #bg-container { 
-            position: fixed; 
-            inset: 0; 
-            background: linear-gradient(135deg, #020b05 0%, #000000 100%); 
+            position: fixed; inset: 0; 
+            background: linear-gradient(135deg, #011104 0%, #000000 100%); 
             z-index: 0; 
-            transition: filter 0.3s; 
-        }
-        #bg-overlay { 
-            position: absolute; 
-            inset: 0; 
-            background: radial-gradient(circle, rgba(0,20,0,0.15) 0%, rgba(0,0,0,0.95) 100%); 
-            z-index: 1; 
         }
         canvas { position: absolute; inset: 0; z-index: 10; pointer-events: none; }
-        #matrix-canvas { z-index: 2; opacity: 0.15; }
-
-        /* UI Elements */
-        #ui-header { position: relative; z-index: 50; padding: 25px 20px; display: flex; justify-content: space-between; box-sizing: border-box; width: 100%; }
-        #score-val { font-size: 52px; font-weight: 900; color: #fff; text-shadow: 0 0 20px var(--neon-green); line-height: 1; }
-        .hp-container { display: flex; gap: 8px; margin-top: 8px; }
-        .hp-dot { width: 14px; height: 14px; border: 2px solid var(--neon-blue); background: var(--neon-blue); box-shadow: 0 0 12px var(--neon-blue); transition: all 0.2s; }
-        .hp-dot.lost { background: transparent; box-shadow: none; opacity: 0.2; border-color: var(--neon-red); }
-        .system-status { font-size: 11px; color: #aaa; margin-top: 4px; letter-spacing: 1px; }
-
-        /* Screens / Modals */
-        .modal { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.94); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; backdrop-filter: blur(5px); }
-        .btn-main { background: transparent; color: var(--neon-green); border: 2px solid var(--neon-green); padding: 15px 45px; font-size: 18px; font-weight: bold; font-family: 'Courier New', monospace; cursor: pointer; box-shadow: 0 0 15px rgba(0,255,65,0.2); transition: all 0.2s; letter-spacing: 2px; }
-        .btn-main:hover { background: var(--neon-green); color: #000; box-shadow: 0 0 30px var(--neon-green); }
         
-        /* Эффект заморозки */
-        .freeze-active #bg-container { filter: hue-rotate(140deg) saturate(1.8); }
+        /* UI */
+        #ui-header { position: relative; z-index: 50; padding: 20px; display: flex; justify-content: space-between; box-sizing: border-box; width: 100%; }
+        #score-val { font-size: 45px; font-weight: bold; color: #fff; text-shadow: 0 0 10px #00ff41; line-height: 1; }
+        .hp-container { display: flex; gap: 8px; margin-top: 8px; }
+        .hp-dot { width: 12px; height: 12px; background: #00f2ff; box-shadow: 0 0 8px #00f2ff; }
+        .hp-dot.lost { background: transparent; border: 1px solid #ff003c; box-shadow: none; opacity: 0.3; }
 
-        @keyframes shake { 0%, 100% { transform: translate(0,0); } 25% { transform: translate(-8px, 4px); } 50% { transform: translate(8px, -4px); } }
-        .shake { animation: shake 0.15s ease-in-out; }
+        /* Модальные окна */
+        .modal { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+        .btn-main { background: transparent; color: #00ff41; border: 2px solid #00ff41; padding: 12px 35px; font-size: 16px; font-weight: bold; font-family: 'Courier New', monospace; cursor: pointer; }
+        .btn-main:hover { background: #00ff41; color: #000; }
     </style>
 </head>
-<body id="main-body">
+<body>
 
-    <div id="bg-container"><div id="bg-overlay"></div><canvas id="matrix-canvas"></canvas></div>
+    <div id="bg-container"></div>
 
-    <!-- Экран старта -->
+    <!-- Старт -->
     <div id="start-screen" class="modal">
-        <h1 style="text-shadow: 0 0 15px var(--neon-green); font-size: 32px; margin-bottom: 5px; color: #fff;">NET_OPTIMIZER v5.5</h1>
-        <p style="color: var(--neon-blue); margin-bottom: 30px; font-size: 14px; letter-spacing: 1px;">CORE_DIAGNOSTIC: READY FOR CALIBRATION</p>
+        <h1 style="color: #fff; font-size: 28px; margin-bottom: 5px;">NET_OPTIMIZER v5.5</h1>
+        <p style="color: #00f2ff; margin-bottom: 25px; font-size: 12px;">CORE_DIAGNOSTIC: READY</p>
         <button id="start-btn" class="btn-main">INITIALIZE</button>
     </div>
 
-    <!-- Экран смерти -->
+    <!-- Смерть -->
     <div id="death-screen" class="modal" style="display: none;">
-        <h1 style="color: var(--neon-red); text-shadow: 0 0 15px var(--neon-red); font-size: 28px;">DIAGNOSTIC_OVERFLOW</h1>
-        <div id="final-stats" style="margin: 25px 0; line-height: 1.8; color: #fff; font-size: 16px;"></div>
+        <h1 style="color: #ff003c; font-size: 26px;">DIAGNOSTIC_OVERFLOW</h1>
+        <div id="final-stats" style="margin: 20px 0; color: #fff; font-size: 14px; line-height: 1.6;"></div>
         <button id="restart-btn" class="btn-main">REBOOT CORE</button>
     </div>
 
@@ -74,306 +53,251 @@
         <div>
             <div id="score-val">0</div>
             <div id="hp-box" class="hp-container">
-                <div class="hp-dot"></div><div class="hp-dot"></div><div class="hp-dot"></div>
+                <div class="hp-dot" id="hp1"></div><div class="hp-dot" id="hp2"></div><div class="hp-dot" id="hp3"></div>
             </div>
-            <div id="speed-ui" class="system-status">LOAD: 1.0x</div>
+            <div id="speed-ui" style="font-size: 11px; color: #aaa; margin-top: 4px;">LOAD: 1.0x</div>
         </div>
         <div style="text-align: right;">
-            <div style="font-size: 10px; color: #aaa; letter-spacing: 1px;">MULTIPLIER</div>
-            <div id="combo-ui" style="font-size: 32px; color: var(--neon-gold); font-weight: bold; text-shadow: 0 0 10px rgba(255,204,0,0.5);">X1</div>
-            <div id="freeze-ui" style="font-size: 11px; color: var(--neon-blue); display: none; font-weight: bold; margin-top: 5px;">BUFFER_DELAY_ACTIVE</div>
+            <div style="font-size: 10px; color: #aaa;">MULTIPLIER</div>
+            <div id="combo-ui" style="font-size: 28px; color: #ffcc00; font-weight: bold;">X1</div>
+            <div id="freeze-ui" style="font-size: 11px; color: #00f2ff; display: none; font-weight: bold; margin-top: 5px;">BUFFER_DELAY</div>
         </div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
 
 <script>
-    // Инициализация Telegram WebApp с защитой от запуска в обычном браузере
-    const tg = window.Telegram ? window.Telegram.WebApp : null;
-    if (tg) {
-        tg.expand();
-        if (tg.ready) tg.ready();
-    }
+    // Мягкая инициализация TG
+    var tg = window.Telegram ? window.Telegram.WebApp : null;
+    if (tg && tg.ready) { tg.ready(); tg.expand(); }
 
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const mCanvas = document.getElementById('matrix-canvas');
-    const mCtx = mCanvas.getContext('2d');
-    const body = document.getElementById('main-body');
+    var canvas = document.getElementById('gameCanvas');
+    var ctx = canvas.getContext('2d');
 
-    let score = 0, hp = 3, combo = 1, gameActive = false, maxCombo = 1, gameSpeed = 1.0;
-    let objects = [], trail = [], particles = [], floatingTexts = [];
-    let freezeTimer = 0;
+    var score = 0, hp = 3, combo = 1, gameActive = false, maxCombo = 1, gameSpeed = 1.0;
+    var objects = [], trail = [], particles = [], floatingTexts = [];
+    var freezeTimer = 0;
 
-    // Ресайз холстов под размер экрана устройства
-    function resizeCanvases() {
-        mCanvas.width = window.innerWidth;
-        mCanvas.height = window.innerHeight;
+    function resize() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
     }
-    window.addEventListener('resize', resizeCanvases);
-    resizeCanvases();
+    window.addEventListener('resize', resize);
+    resize();
 
-    // Матричный фон
-    const drops = Array(Math.floor(mCanvas.width / 20)).fill(1);
-    function drawMatrix() {
-        mCtx.fillStyle = "rgba(0, 0, 0, 0.08)";
-        mCtx.fillRect(0, 0, mCanvas.width, mCanvas.height);
-        mCtx.fillStyle = freezeTimer > 0 ? "#00f2ff" : "#00ff41"; 
-        mCtx.font = "14px monospace";
-        drops.forEach((y, i) => {
-            mCtx.fillText(String.fromCharCode(0x30A0 + Math.random() * 96), i * 20, y * 20);
-            if (y * 20 > mCanvas.height && Math.random() > 0.98) drops[i] = 0;
-            drops[i]++;
-        });
-    }
+    // Конструктор объектов через функцию (работает на старых движках лучше классов)
+    function NetworkNode() {
+        this.size = 40;
+        this.x = Math.random() * (canvas.width - 80) + 40;
+        this.y = canvas.height + 40;
+        
+        var baseForce = 11 + Math.random() * 4 + (gameSpeed * 1.2);
+        this.sy = -baseForce;
+        this.sx = (Math.random() - 0.5) * 4;
+        
+        this.angle = Math.random() * 3.14;
+        this.rotationSpeed = (Math.random() - 0.5) * 0.05;
+        this.history = [];
 
-    class NetworkNode {
-        constructor() {
-            this.size = 46;
-            this.x = Math.random() * (window.innerWidth - 80) + 40;
-            this.y = window.innerHeight + 40;
-            
-            let baseForce = 12 + Math.random() * 5 + (gameSpeed * 1.5);
-            this.sy = -baseForce;
-            this.sx = (Math.random() - 0.5) * 5;
-            
-            this.angle = Math.random() * Math.PI;
-            this.rotationSpeed = (Math.random() - 0.5) * 0.06;
-            this.history = [];
-
-            const r = Math.random();
-            if (r < 0.18) { 
-                this.type = 'err'; 
-                this.color = 'rgb(255, 0, 60)'; 
-            } else if (r > 0.92) { 
-                this.type = 'gold'; 
-                this.color = 'rgb(255, 204, 0)'; 
-            } else if (r > 0.83 && r <= 0.92) {
-                this.type = 'freeze'; 
-                this.color = 'rgb(0, 242, 255)';
-            } else { 
-                this.type = 'data'; 
-                this.color = 'rgb(0, 255, 65)'; 
-            }
+        var r = Math.random();
+        if (r < 0.15) { 
+            this.type = 'err'; 
+            this.color = '#ff003c'; // Красный (спам)
+        } else if (r > 0.90) { 
+            this.type = 'gold'; 
+            this.color = '#ffcc00'; // Золотой (супер)
+        } else if (r > 0.80 && r <= 0.90) {
+            this.type = 'freeze'; 
+            this.color = '#00f2ff'; // Синий (заморозка)
+        } else { 
+            this.type = 'data'; 
+            this.color = '#00ff41'; // Зеленый (стандарт)
         }
-
-        update() {
-            this.history.push({x: this.x, y: this.y, angle: this.angle});
-            if (this.history.length > 5) this.history.shift();
-
-            let currentMod = freezeTimer > 0 ? 0.28 : 1.0;
-
-            this.x += this.sx * currentMod;
-            this.sy += 0.32 * currentMod; 
-            this.y += this.sy * currentMod;
-            this.angle += this.rotationSpeed * currentMod;
-        }
-
-        draw() {
-            this.history.forEach((pos, idx) => {
-                ctx.save();
-                ctx.translate(pos.x, pos.y);
-                ctx.rotate(pos.angle);
-                ctx.strokeStyle = this.color;
-                ctx.lineWidth = 1;
-                ctx.globalAlpha = (idx / this.history.length) * 0.3;
-                ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
-                ctx.restore();
-            });
-
-            ctx.save();
-            ctx.translate(this.x, this.y);
-            ctx.rotate(this.angle);
-            ctx.strokeStyle = this.color;
-            ctx.lineWidth = 3;
-            ctx.shadowBlur = 12;
-            ctx.shadowColor = this.color;
-            ctx.globalAlpha = 1.0;
-            ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
-            
-            ctx.fillStyle = this.color.replace('rgb', 'rgba').replace(')', ', 0.15)');
-            ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
-            ctx.restore();
-            ctx.shadowBlur = 0; 
-        }
-    }
-
-    function triggerShake() {
-        body.classList.add('shake');
-        if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-        setTimeout(() => body.classList.remove('shake'), 150);
     }
 
     function takeDamage() {
         hp--;
-        const dots = document.querySelectorAll('.hp-dot');
-        if (dots[hp]) dots[hp].classList.add('lost');
-        triggerShake();
-        if (hp <= 0) endGame();
+        if (hp == 2) document.getElementById('hp3').classList.add('lost');
+        if (hp == 1) document.getElementById('hp2').classList.add('lost');
+        if (hp == 0) {
+            document.getElementById('hp1').classList.add('lost');
+            endGame();
+        }
+        if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
     }
 
     function handleInput(x, y) {
         if (!gameActive) return;
-        trail.push({x, y, life: 1.0});
+        trail.push({x: x, y: y, life: 1.0});
 
-        objects.forEach((obj, i) => {
-            if (Math.hypot(x - obj.x, y - obj.y) < 48) {
-                for (let p = 0; p < 18; p++) {
+        for (var i = objects.length - 1; i >= 0; i--) {
+            var obj = objects[i];
+            var dist = Math.sqrt(Math.pow(x - obj.x, 2) + Math.pow(y - obj.y, 2));
+            
+            if (dist < 45) {
+                // Искры
+                for (var p = 0; p < 12; p++) {
                     particles.push({
-                        x: obj.x, y: obj.y, 
-                        sx: (Math.random() - 0.5) * 12, sy: (Math.random() - 0.5) * 12, 
-                        life: 1.0, 
-                        decay: 0.02 + Math.random() * 0.02,
+                        x: obj.x, y: obj.y,
+                        sx: (Math.random() - 0.5) * 10,
+                        sy: (Math.random() - 0.5) * 10,
+                        life: 1.0,
                         color: obj.color
                     });
                 }
-                
+
                 if (obj.type === 'err') {
-                    combo = 1; 
-                    if (freezeTimer > 0) freezeTimer = 0; 
+                    combo = 1;
+                    freezeTimer = 0;
                     takeDamage();
                 } else if (obj.type === 'freeze') {
-                    freezeTimer = 240; 
-                    score += 150 * combo;
+                    freezeTimer = 200; // заморозка
+                    score += 100 * combo;
+                    floatingTexts.push({x: obj.x, y: obj.y, text: "FREEZE", color: obj.color, life: 1.0});
                     if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('heavy');
-                    floatingTexts.push({x: obj.x, y: obj.y, text: "BUFFER_DELAY", color: obj.color, life: 1});
                 } else {
-                    let pts = (obj.type === 'gold' ? 400 : 100) * combo;
+                    var pts = (obj.type === 'gold' ? 300 : 100) * combo;
                     score += pts;
                     if (combo > maxCombo) maxCombo = combo;
                     combo++;
-                    
-                    gameSpeed = 1.0 + Math.floor(score / 500) * 0.12;
-                    if (gameSpeed > 2.5) gameSpeed = 2.5; 
 
-                    floatingTexts.push({x: obj.x, y: obj.y, text: `+${pts}`, color: obj.color, life: 1});
+                    gameSpeed = 1.0 + Math.floor(score / 500) * 0.1;
+                    if (gameSpeed > 2.2) gameSpeed = 2.2;
+
+                    floatingTexts.push({x: obj.x, y: obj.y, text: "+" + pts, color: obj.color, life: 1.0});
                     if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
                 }
                 objects.splice(i, 1);
                 updateUI();
             }
-        });
+        }
     }
 
     function updateUI() {
         document.getElementById('score-val').innerText = score;
         document.getElementById('combo-ui').innerText = "X" + combo;
-        document.getElementById('speed-ui').innerText = `LOAD: ${gameSpeed.toFixed(1)}x`;
-        
-        const freezeUI = document.getElementById('freeze-ui');
-        if (freezeTimer > 0) {
-            body.classList.add('freeze-active');
-            freezeUI.style.display = 'block';
-        } else {
-            body.classList.remove('freeze-active');
-            freezeUI.style.display = 'none';
-        }
+        document.getElementById('speed-ui').innerText = "LOAD: " + gameSpeed.toFixed(1) + "x";
+        document.getElementById('freeze-ui').style.display = freezeTimer > 0 ? 'block' : 'none';
     }
 
     function endGame() {
         gameActive = false;
         document.getElementById('death-screen').style.display = 'flex';
-        document.getElementById('final-stats').innerHTML = `
-            CLEAN_ROUTE_SCORE: ${score} Pts<br>
-            PEAK_EFFICIENCY: X${maxCombo}<br>
-            DIAGNOSTIC_LOG: BUFFER_OVERFLOW
-        `;
+        document.getElementById('final-stats').innerHTML = 
+            "SCORE: " + score + " Pts<br>MAX COMBO: X" + maxCombo;
     }
 
     function resetGame() {
         score = 0; hp = 3; combo = 1; gameSpeed = 1.0; freezeTimer = 0;
         objects = []; particles = []; trail = []; floatingTexts = [];
-        document.querySelectorAll('.hp-dot').forEach(d => d.classList.remove('lost'));
+        document.getElementById('hp1').classList.remove('lost');
+        document.getElementById('hp2').classList.remove('lost');
+        document.getElementById('hp3').classList.remove('lost');
         document.getElementById('death-screen').style.display = 'none';
-        updateUI(); gameActive = true;
+        updateUI();
+        gameActive = true;
     }
 
-    document.getElementById('start-btn').onclick = () => {
+    document.getElementById('start-btn').onclick = function() {
         document.getElementById('start-screen').style.display = 'none';
         gameActive = true;
     };
 
     document.getElementById('restart-btn').onclick = resetGame;
 
-    function handleTouch(e) {
-        e.preventDefault();
-        if (e.touches && e.touches.length > 0) {
-            handleInput(e.touches[0].clientX, e.touches[0].clientY);
-        }
-    }
-    window.addEventListener('touchmove', handleTouch, {passive: false});
-    window.addEventListener('touchstart', handleTouch, {passive: false});
+    // Ввод пальца (универсальный)
+    window.addEventListener('touchstart', function(e) {
+        if(e.touches.length > 0) handleInput(e.touches[0].clientX, e.touches[0].clientY);
+    }, {passive: true});
+    
+    window.addEventListener('touchmove', function(e) {
+        if(e.touches.length > 0) handleInput(e.touches[0].clientX, e.touches[0].clientY);
+    }, {passive: true});
 
+    // Основной цикл игры
     function loop() {
-        drawMatrix();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (freezeTimer > 0) {
             freezeTimer--;
-            if (freezeTimer === 0) updateUI();
+            if (freezeTimer == 0) updateUI();
         }
 
         if (gameActive) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Отрисовка следа пальца (Trail)
+            // След пальца
             if (trail.length > 1) {
-                for (let i = 1; i < trail.length; i++) {
+                for (var i = 1; i < trail.length; i++) {
                     ctx.beginPath();
-                    ctx.strokeStyle = `rgba(255, 255, 255, ${trail[i].life})`;
-                    ctx.lineWidth = 6 * trail[i].life;
-                    ctx.lineCap = 'round';
+                    ctx.strokeStyle = "rgba(255,255,255," + trail[i].life + ")";
+                    ctx.lineWidth = 4 * trail[i].life;
                     ctx.moveTo(trail[i-1].x, trail[i-1].y);
                     ctx.lineTo(trail[i].x, trail[i].y);
                     ctx.stroke();
                 }
-                trail.forEach(t => t.life -= 0.08); 
-                trail = trail.filter(t => t.life > 0);
+                for(var t=0; t<trail.length; t++) { trail[t].life -= 0.05; }
+                trail = trail.filter(function(t) { return t.life > 0; });
             }
 
-            let spawnChance = freezeTimer > 0 ? 0.015 : (0.035 * gameSpeed);
-            if (Math.random() < spawnChance && objects.length < 5) {
+            // Спавн
+            var spawnChance = freezeTimer > 0 ? 0.01 : (0.03 * gameSpeed);
+            if (Math.random() < spawnChance && objects.length < 4) {
                 objects.push(new NetworkNode());
             }
 
-            // Обновление кубов
-            objects.forEach((obj, i) => {
-                obj.update(); obj.draw();
-                if (obj.y > window.innerHeight + 80) { 
-                    if (obj.type !== 'err' && obj.type !== 'freeze') { 
-                        combo = 1; takeDamage(); 
+            // Движение кубов
+            var currentMod = freezeTimer > 0 ? 0.3 : 1.0;
+            for (var i = objects.length - 1; i >= 0; i--) {
+                var obj = objects[i];
+                obj.x += obj.sx * currentMod;
+                obj.sy += 0.3 * currentMod;
+                obj.y += obj.sy * currentMod;
+                obj.angle += obj.rotationSpeed * currentMod;
+
+                // Отрисовка куба
+                ctx.save();
+                ctx.translate(obj.x, obj.y);
+                ctx.rotate(obj.angle);
+                ctx.strokeStyle = obj.color;
+                ctx.lineWidth = 3;
+                ctx.strokeRect(-obj.size/2, -obj.size/2, obj.size, obj.size);
+                ctx.restore();
+
+                // Вылет за экран
+                if (obj.y > canvas.height + 60) {
+                    if (obj.type !== 'err' && obj.type !== 'freeze') {
+                        combo = 1;
+                        takeDamage();
                     }
-                    objects.splice(i, 1); updateUI();
+                    objects.splice(i, 1);
+                    updateUI();
                 }
-            });
+            }
 
-            // Частицы (искры)
-            particles.forEach((p, i) => {
-                let pMod = freezeTimer > 0 ? 0.3 : 1.0;
-                p.x += p.sx * pMod;
-                p.y += p.sy * pMod + 0.15; 
-                p.life -= p.decay;
-                
-                ctx.fillStyle = p.color.replace('rgb', 'rgba').replace(')', `, ${p.life})`);
-                ctx.shadowBlur = p.life * 8;
-                ctx.shadowColor = p.color;
+            // Искры
+            for (var i = particles.length - 1; i >= 0; i--) {
+                var p = particles[i];
+                p.x += p.sx * currentMod;
+                p.y += p.sy * currentMod + 0.1;
+                p.life -= 0.03;
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life;
                 ctx.fillRect(p.x, p.y, 3, 3);
-                
                 if (p.life <= 0) particles.splice(i, 1);
-            });
-            ctx.shadowBlur = 0;
+            }
+            ctx.globalAlpha = 1.0;
 
-            // Текст очков
-            floatingTexts.forEach((f, i) => {
+            // Тексты очков
+            for (var i = floatingTexts.length - 1; i >= 0; i--) {
+                var f = floatingTexts[i];
+                f.y -= 1;
+                f.life -= 0.03;
                 ctx.fillStyle = f.color;
-                ctx.font = "bold 18px 'Courier New'";
-                ctx.fillText(f.text, f.x - 20, f.y);
-                f.y -= 1.2; 
-                f.life -= 0.025;
+                ctx.font = "bold 16px monospace";
+                ctx.fillText(f.text, f.x - 15, f.y);
                 if (f.life <= 0) floatingTexts.splice(i, 1);
-            });
+            }
         }
+
         requestAnimationFrame(loop);
     }
     loop();
